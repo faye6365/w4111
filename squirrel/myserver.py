@@ -147,8 +147,10 @@ class PayDepositResults(Table):
     oname = Col('Name')
     olabel = Col('Label')
     odescription = Col('Description')
-    # edit = LinkCol('Edit', 'edit', url_kwargs=dict(oid='oid')) # Called edit() when the link is clicked.
-    # delete = LinkCol('Delete', 'delete', url_kwargs=dict(oid='oid')) # Called
+    # Called edit_paydeposit() when the link is clicked.
+    edit = LinkCol('Edit', 'edit_paydeposit', url_kwargs=dict(oid='oid'))
+    # Called delete_paydeposit() when the link is clicked.
+    delete = LinkCol('Delete', 'delete_paydeposit', url_kwargs=dict(oid='oid'))
 
 ##################################################################################
 # view payment/deposit options
@@ -156,7 +158,7 @@ class PayDepositResults(Table):
 @app.route('/paydeposit', methods=['POST', 'GET'])
 def paydeposit():
     cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options "
-                            "WHERE uid = {uid}".format(uid=session['uid']))
+                            "WHERE uid = {uid} ORDER BY oid".format(uid=session['uid']))
     results = []
     for result in cursor:
         results.append({'oid': result['oid'],
@@ -171,17 +173,17 @@ def paydeposit():
 ##################################################################################
 # add new payment/deposit option
 ##################################################################################
-@app.route('/addpaydeposit', methods=['POST', 'GET'])
-def addpaydeposit():
+@app.route('/add_paydeposit', methods=['POST', 'GET'])
+def add_paydeposit():
     if request.method == 'GET':
-        return render_template("addpaydeposit.html")
+        return render_template("add_paydeposit.html")
     
     POST_ONAME = request.form['oname']
     POST_OLABEL = request.form['olabel']
     POST_ODESCRIPTION = request.form['odescription']
     if not POST_ONAME:
         flash('name should not be null.')
-        return redirect(url_for('addpaydeposit'))
+        return redirect(url_for('add_paydeposit'))
 
     # create new record in db
     cursor = g.conn.execute("SELECT MAX(oid) FROM Payment_Deposit_Options;")
@@ -191,35 +193,64 @@ def addpaydeposit():
         # if violate ICs, redirect to another add payment/deposit option page
         insert_cmd = "INSERT INTO Payment_Deposit_Options(oid, oname, olabel, odescription, uid) VALUES" + \
                      "({oid},  \'{oname}\', \'{olabel}\', \'{odescription}\', {uid});".format(
-                     oid=curoid, oname=POST_ONAME.replace('\'', '\'\''), olabel=POST_OLABEL, odescription=POST_ODESCRIPTION,
-                     uid=session['uid'])
-        print insert_cmd
-        pdb.set_trace()
-
+                     oid=curoid, oname=POST_ONAME.replace('\'', '\'\''), olabel=POST_OLABEL,
+                     odescription=POST_ODESCRIPTION.replace('\'', '\'\''), uid=session['uid'])
         g.conn.execute(insert_cmd)
     except:
         flash('Payment/deposit option cannot be created.')
-        return redirect(url_for('addpaydeposit'))
+        return redirect(url_for('add_paydeposit'))
     flash('Option created.')
     return redirect(url_for('paydeposit'))
 
+##################################################################################
+# edit a payment/deposit option
+##################################################################################
+@app.route('/edit_paydeposit/<int:oid>', methods=['GET', 'POST'])
+def edit_paydeposit(oid):
+    if request.method == 'GET':
+        cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE oid = {oid}".format(oid=oid))
+        record = cursor.next()
+        cursor.close()
+        return render_template("edit_paydeposit.html", oid=oid, oname=record['oname'],
+                               olabel=record['olabel'], odescription=record['odescription'])
+
+    POST_ONAME = request.form['oname'].rstrip()
+    POST_OLABEL = request.form['olabel'].rstrip()
+    POST_ODESCRIPTION = request.form['odescription'].rstrip()
+    if not POST_ONAME:
+        flash('name should not be null.')
+        return redirect('/edit_paydeposit/{oid}'.format(oid=oid))
+
+    try:
+        update_cmd = "UPDATE Payment_Deposit_Options SET " +\
+                     "oname=\'{oname}\', olabel=\'{olabel}\', odescription=\'{odescription}\' WHERE oid={oid};".format(
+                     oname=POST_ONAME.replace('\'', '\'\''), olabel=POST_OLABEL,
+                     odescription=POST_ODESCRIPTION.replace('\'', '\'\''), oid=oid)
+        g.conn.execute(update_cmd)
+    except:
+        flash('Option cannot be updated!')
+        return redirect(url_for('paydeposit'))
+    flash('Option updated successfully!')
+    return redirect(url_for('paydeposit'))
 
 
-# @app.route('/item/<int:id>', methods=['GET', 'POST'])
-# def edit(id):
-#     try:
-#         cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options "
-#                                 "WHERE oid = {oid}".format(oid=id))
-#         result = cursor.next()[0]
-#         cursor.close()
-#     except:
-#         return 'Error loading #{id}'.format(id=id)
-#
-#     if request.method == 'POST':
-#
-#
-#     return render_template("edit_paydeposit.html", )
+##################################################################################
+# delete a payment/deposit option
+##################################################################################
+@app.route('/delete_paydeposit/<int:oid>', methods=['GET', 'POST'])
+def delete_paydeposit(oid):
+    if request.method == 'GET':
+        return render_template("delete_paydeposit.html", oid=oid)
 
+    # delete the item from the database
+    try:
+        delete_cmd = "DELETE FROM Payment_Deposit_Options WHERE oid = {oid};".format(oid=oid)
+        g.conn.execute(delete_cmd)
+        flash('Option deleted successfully!')
+    except:
+        flash('Option cannot be deleted!')
+        return redirect(url_for("paydeposit"))
+    return redirect(url_for("paydeposit"))
 
 
 if __name__ == "__main__":
