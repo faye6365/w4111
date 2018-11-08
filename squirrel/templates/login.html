@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block body %}
+<h1>Sqruirrels -Your Money Tracker</h1>
+<br>
+<form action="/login" method="POST">
+  <input type="text" name="username" placeholder="Username">
+  <input type="password" name="password" placeholder="Password">
+  <input type="submit" value="Log in">
+</form>
+<p><a href="/signup">New User Sign Up Here.</a></p>
+{% endblock %}

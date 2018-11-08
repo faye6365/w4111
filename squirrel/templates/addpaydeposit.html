@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block body %}
+<h1>New Payment/Deposit Option</h1>
+<br>
+<form action="/addpaydeposit" method="POST">
+  <input type="text" name="oname" placeholder="Name">
+  <input type="text" name="olabel" placeholder="Label">
+  <input type="text" name="odescription" placeholder="Description">
+  <input type="submit" value="Add">
+</form>
+
+<b><a href = '/paydeposit'>click here to go back</a></b>
+{% endblock %}
