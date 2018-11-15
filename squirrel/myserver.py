@@ -63,7 +63,7 @@ def index():
     if 'uid' in session:
         uid = session['uid']
         cursor = g.conn.execute("SELECT name FROM Users "
-                                "WHERE uid = \'{uid}\'".format(uid=uid))
+                                "WHERE uid = %s", (uid,))
         name = cursor.next()[0]
         cursor.close()
         return render_template('dashboard.html', name=name)
@@ -84,9 +84,8 @@ def login():
     if 'uid' not in session:
         try:
             cursor = g.conn.execute("SELECT uid FROM Users "
-                                    "WHERE username = \'{username}\' AND "
-                                    "password = \'{password}\';".format(
-                                    username=POST_USERNAME, password=POST_PASSWORD))
+                                    "WHERE username = %s AND "
+                                    "password = %s;", (POST_USERNAME, POST_PASSWORD))
             session['uid'] = cursor.next()[0]
             cursor.close()
         except:
@@ -129,8 +128,7 @@ def signup():
     try:
         # usernames are set to be unique, if violate ICs, redirect to another sign-up page
         g.conn.execute("INSERT INTO Users(uid, username, name, password) VALUES"
-                        "({uid}, \'{username}\', \'{name}\', \'{password}\');".format(
-                        uid=curuid, username=POST_USERNAME, name=POST_NAME, password=POST_PASSWORD))
+                        "(%s, %s, %s, %s);", (curuid, POST_USERNAME, POST_NAME, POST_PASSWORD))
     except:
         flash('User cannot be created.')
         return redirect(url_for('signup'))
@@ -157,8 +155,7 @@ class PayDepositResults(Table):
 ##################################################################################
 @app.route('/paydeposit', methods=['POST', 'GET'])
 def paydeposit():
-    cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options "
-                            "WHERE uid = {uid} ORDER BY oid".format(uid=session['uid']))
+    cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE uid = %s ORDER BY oid", (session['uid'],))
     results = []
     for result in cursor:
         results.append({'oid': result['oid'],
@@ -191,11 +188,9 @@ def add_paydeposit():
     cursor.close()
     try:
         # if violate ICs, redirect to another add payment/deposit option page
-        insert_cmd = "INSERT INTO Payment_Deposit_Options(oid, oname, olabel, odescription, uid) VALUES" + \
-                     "({oid},  \'{oname}\', \'{olabel}\', \'{odescription}\', {uid});".format(
-                     oid=curoid, oname=POST_ONAME.replace('\'', '\'\''), olabel=POST_OLABEL,
-                     odescription=POST_ODESCRIPTION.replace('\'', '\'\''), uid=session['uid'])
-        g.conn.execute(insert_cmd)
+
+        g.conn.execute("INSERT INTO Payment_Deposit_Options(oid, oname, olabel, odescription, uid) VALUES "
+                       "(%s,  %s, %s, %s, %s);", (curoid, POST_ONAME, POST_OLABEL, POST_ODESCRIPTION, session['uid']))
     except:
         flash('Payment/deposit option cannot be created.')
         return redirect(url_for('add_paydeposit'))
@@ -208,7 +203,7 @@ def add_paydeposit():
 @app.route('/edit_paydeposit/<int:oid>', methods=['GET', 'POST'])
 def edit_paydeposit(oid):
     if request.method == 'GET':
-        cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE oid = {oid}".format(oid=oid))
+        cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE oid = %s", (oid,))
         record = cursor.next()
         cursor.close()
         return render_template("edit_paydeposit.html", oid=oid, oname=record['oname'],
@@ -222,11 +217,8 @@ def edit_paydeposit(oid):
         return redirect('/edit_paydeposit/{oid}'.format(oid=oid))
 
     try:
-        update_cmd = "UPDATE Payment_Deposit_Options SET " +\
-                     "oname=\'{oname}\', olabel=\'{olabel}\', odescription=\'{odescription}\' WHERE oid={oid};".format(
-                     oname=POST_ONAME.replace('\'', '\'\''), olabel=POST_OLABEL,
-                     odescription=POST_ODESCRIPTION.replace('\'', '\'\''), oid=oid)
-        g.conn.execute(update_cmd)
+        g.conn.execute("UPDATE Payment_Deposit_Options SET oname=%s, olabel=%s, odescription=%s "
+                       "WHERE oid=%s;", (POST_ONAME, POST_OLABEL, POST_ODESCRIPTION, oid))
     except:
         flash('Option cannot be updated!')
         return redirect(url_for('paydeposit'))
@@ -244,8 +236,7 @@ def delete_paydeposit(oid):
 
     # delete the item from the database
     try:
-        delete_cmd = "DELETE FROM Payment_Deposit_Options WHERE oid = {oid};".format(oid=oid)
-        g.conn.execute(delete_cmd)
+        g.conn.execute("DELETE FROM Payment_Deposit_Options WHERE oid = %s;", (oid,))
         flash('Option deleted successfully!')
     except:
         flash('Option cannot be deleted!')
