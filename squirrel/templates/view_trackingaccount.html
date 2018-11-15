@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block body %}
+<br>
+<form action="/view_trackingaccount/{{ aid }}" method="POST">
+  <input type="month" name="month">
+  <input type="submit" value="Submit">
+</form>
+<br>
+<br>
+{{table}}
+<br>
+<!--<a href = '/add_trackingaccount'>click here to add a trackingaccount</a>-->
+<br>
+<br>
+<b><a href = '/logout'>click here to log out</a></b>
+{% endblock %}

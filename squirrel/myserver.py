@@ -70,7 +70,7 @@ def index():
         cursor.close()
 
         # tracking account table
-        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid", (session['uid'],))
+        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid;", (session['uid'],))
         results = []
         for result in cursor:
             results.append({'aid': result['aid'],
@@ -162,6 +162,50 @@ class TrackingAccountResults(Table):
     edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
     # Called delete_trackingaccount() when the link is clicked.
     delete = LinkCol('Delete', 'delete_trackingaccount', url_kwargs=dict(aid='aid'))
+    view = LinkCol('View', 'view_trackingaccount', url_kwargs=dict(aid='aid'))
+
+
+##################################################################################
+# Use Flask_table module to generate html table for Trades (Expenses/Incomes)
+# (third-party library)
+##################################################################################
+class TradeResults(Table):
+    tid = Col('Id', show=False)
+    tdate = Col('Date')
+    tdescription = Col('Description')
+    tamount = Col('Amount')
+
+    # # Called edit_trackingaccount() when the link is clicked.
+    # edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
+    # # Called delete_trackingaccount() when the link is clicked.
+    # delete = LinkCol('Delete', 'delete_trackingaccount', url_kwargs=dict(aid='aid'))
+
+
+##################################################################################
+# view trades/statement in the tracking account
+# TODO: This is a raw version of view_trackingacount
+##################################################################################
+@app.route('/view_trackingaccount/<int:aid>', methods=['GET', 'POST'])
+def view_trackingaccount(aid):
+    if request.method == 'POST':
+        results = []
+        POST_YEARMONTH = str(request.form['month'])
+        POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
+        cursor = g.conn.execute("SELECT * FROM Expenses WHERE aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\';",
+                                (aid, POST_YEAR, POST_MONTH, POST_YEAR, POST_MONTH))
+        for result in cursor:
+            results.append({'tid': result['tid'],
+                            'tdate': result['tdate'],
+                            'tdescription': result['tdescription'],
+                            'tamount': result['tamount']})
+        cursor.close()
+        table = TradeResults(results)
+        table.border = True
+        return render_template("view_trackingaccount.html", aid=aid, table=table)
+
+    return render_template("view_trackingaccount.html", aid=aid, table=None)
 
 
 ##################################################################################
@@ -199,7 +243,7 @@ def add_trackingaccount():
 @app.route('/edit_trackingaccount/<int:aid>', methods=['GET', 'POST'])
 def edit_trackingaccount(aid):
     if request.method == 'GET':
-        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE aid = %s", (aid,))
+        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE aid = %s;", (aid,))
         record = cursor.next()
         cursor.close()
         return render_template("edit_trackingaccount.html", aid=aid, aname=record['aname'],
@@ -268,7 +312,7 @@ class PayDepositResults(Table):
 ##################################################################################
 @app.route('/paydeposit', methods=['POST', 'GET'])
 def paydeposit():
-    cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE uid = %s ORDER BY oid", (session['uid'],))
+    cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE uid = %s ORDER BY oid;", (session['uid'],))
     results = []
     for result in cursor:
         results.append({'oid': result['oid'],
@@ -316,7 +360,7 @@ def add_paydeposit():
 @app.route('/edit_paydeposit/<int:oid>', methods=['GET', 'POST'])
 def edit_paydeposit(oid):
     if request.method == 'GET':
-        cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE oid = %s", (oid,))
+        cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE oid = %s;", (oid,))
         record = cursor.next()
         cursor.close()
         return render_template("edit_paydeposit.html", oid=oid, oname=record['oname'],
@@ -377,7 +421,7 @@ class PeopleResults(Table):
 ##################################################################################
 @app.route('/people', methods=['POST', 'GET'])
 def people():
-    cursor = g.conn.execute("SELECT * FROM People WHERE uid = %s ORDER BY pid", (session['uid'],))
+    cursor = g.conn.execute("SELECT * FROM People WHERE uid = %s ORDER BY pid;", (session['uid'],))
     results = []
     for result in cursor:
         results.append({'pid': result['pid'],
@@ -427,7 +471,7 @@ def add_people():
 @app.route('/edit_people/<int:pid>', methods=['GET', 'POST'])
 def edit_people(pid):
     if request.method == 'GET':
-        cursor = g.conn.execute("SELECT * FROM People WHERE pid = %s", (pid,))
+        cursor = g.conn.execute("SELECT * FROM People WHERE pid = %s;", (pid,))
         record = cursor.next()
         cursor.close()
         return render_template("edit_people.html", pid=pid, pname=record['pname'],
