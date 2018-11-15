@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block body %}
+<h1>Edit Tracking Account</h1>
+<br>
+<form action="/edit_trackingaccount/{{ aid }}" method="POST">
+  <input type="text" name="aname" value="{{ aname }}">
+  <input type="text" name="adescription" value="{{ adescription }}">
+  <input type="submit" value="Submit">
+</form>
+
+<b><a href = '/'>click here to go back</a></b>
+{% endblock %}

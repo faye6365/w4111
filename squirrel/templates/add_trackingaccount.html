@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block body %}
+<h1>New Tracking Account</h1>
+<br>
+<form action="/add_trackingaccount" method="POST">
+  <input type="text" name="aname" placeholder="Name">
+  <input type="text" name="adescription" placeholder="Description">
+  <input type="submit" value="Add">
+</form>
+
+<b><a href = '/'>click here to go back</a></b>
+{% endblock %}

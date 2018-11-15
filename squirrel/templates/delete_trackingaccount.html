@@ -1,0 +1,13 @@
+{% block body %}
+<b>Warning: This is a dangerous action!</b>
+<br>
+<b>Are you sure you want to delete the whole tracking account?</b>
+<br>
+<b>If yes, please verify your password.</b>
+<form action="/delete_trackingaccount/{{ aid }}" method="post">
+    <input type="password" name="password" placeholder="Password">
+    <input type="submit" value="Delete">
+</form>
+<br>
+<b><a href = '/'>click here to go back</a></b>
+{% endblock %}

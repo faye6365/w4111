@@ -62,11 +62,25 @@ def teardown_request(exception):
 def index():
     if 'uid' in session:
         uid = session['uid']
+
+        # retrieve the name of the user for greeting message
         cursor = g.conn.execute("SELECT name FROM Users "
                                 "WHERE uid = %s", (uid,))
         name = cursor.next()[0]
         cursor.close()
-        return render_template('dashboard.html', name=name)
+
+        # tracking account table
+        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid", (session['uid'],))
+        results = []
+        for result in cursor:
+            results.append({'aid': result['aid'],
+                            'aname': result['aname'],
+                            'adescription': result['adescription']})
+        cursor.close()
+        table = TrackingAccountResults(results)
+        table.border = True
+
+        return render_template('dashboard.html', table=table, name=name)
     else:
         return render_template('login.html')
 
@@ -134,6 +148,105 @@ def signup():
         return redirect(url_for('signup'))
     flash('User created.')
     return redirect(url_for('index'))
+
+
+##################################################################################
+# Use Flask_table module to generate html table for Tracking Account
+# (third-party library)
+##################################################################################
+class TrackingAccountResults(Table):
+    aid = Col('Id', show=False)
+    aname = Col('Name')
+    adescription = Col('Description')
+    # Called edit_trackingaccount() when the link is clicked.
+    edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
+    # Called delete_trackingaccount() when the link is clicked.
+    delete = LinkCol('Delete', 'delete_trackingaccount', url_kwargs=dict(aid='aid'))
+
+
+##################################################################################
+# add new tracking account
+##################################################################################
+@app.route('/add_trackingaccount', methods=['POST', 'GET'])
+def add_trackingaccount():
+    if request.method == 'GET':
+        return render_template("add_trackingaccount.html")
+
+    POST_ANAME = request.form['aname']
+    POST_ADESCRIPTION = request.form['adescription']
+    if not POST_ANAME:
+        flash('name should not be null.')
+        return redirect(url_for('add_trackingaccount'))
+
+    # create new record in db
+    cursor = g.conn.execute("SELECT MAX(aid) FROM Tracking_Accounts;")
+    curaid = cursor.next()[0] + 1
+    cursor.close()
+    try:
+        # if violate ICs, redirect to another add tracking account page
+        g.conn.execute("INSERT INTO Tracking_Accounts(aid, aname, adescription, uid) VALUES "
+                       "(%s,  %s, %s, %s);", (curaid, POST_ANAME, POST_ADESCRIPTION, session['uid']))
+    except:
+        flash('Tracking account cannot be created.')
+        return redirect(url_for('add_trackingaccount'))
+    flash('Tracking account created.')
+    return redirect('/')
+
+
+##################################################################################
+# edit a tracking account
+##################################################################################
+@app.route('/edit_trackingaccount/<int:aid>', methods=['GET', 'POST'])
+def edit_trackingaccount(aid):
+    if request.method == 'GET':
+        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE aid = %s", (aid,))
+        record = cursor.next()
+        cursor.close()
+        return render_template("edit_trackingaccount.html", aid=aid, aname=record['aname'],
+                               adescription=record['adescription'])
+
+    POST_ANAME = request.form['aname'].rstrip()
+    POST_ADESCRIPTION = request.form['adescription'].rstrip()
+    if not POST_ANAME:
+        flash('name should not be null.')
+        return redirect('/edit_trackingaccount/{aid}'.format(aid=aid))
+
+    try:
+        g.conn.execute("UPDATE Tracking_Accounts SET aname=%s, adescription=%s "
+                       "WHERE aid=%s;", (POST_ANAME, POST_ADESCRIPTION, aid))
+    except:
+        flash('Tracking account cannot be updated!')
+        return redirect(url_for('paydeposit'))
+    flash('Tracking account updated successfully!')
+    return redirect('/')
+
+
+##################################################################################
+# delete a tracking account
+##################################################################################
+@app.route('/delete_trackingaccount/<int:aid>', methods=['GET', 'POST'])
+def delete_trackingaccount(aid):
+    if request.method == 'GET':
+        return render_template("delete_trackingaccount.html", aid=aid)
+
+    POST_PASSWORD = str(request.form['password'])
+    try:
+        cursor = g.conn.execute("SELECT * FROM Users "
+                                "WHERE uid = %s AND "
+                                "password = %s;", (session['uid'], POST_PASSWORD))
+        cursor.close()
+    except:
+        flash('password not matched! not authorized to delete the tracking_account')
+        return redirect("/")
+
+    # delete the item from the database
+    try:
+        g.conn.execute("DELETE FROM Tracking_Accounts WHERE aid = %s;", (aid,))
+        flash('Tracking account deleted successfully!')
+    except:
+        flash('Tracking account cannot be deleted!')
+        return redirect("/")
+    return redirect("/")
 
 
 ##################################################################################
@@ -248,7 +361,7 @@ def delete_paydeposit(oid):
 # Use Flask_table module to generate html table for People
 # (third-party library)
 ##################################################################################
-class People(Table):
+class PeopleResults(Table):
     pid = Col('Id', show=False)
     pname = Col('Name')
     plabel = Col('Label')
@@ -272,7 +385,7 @@ def people():
                         'plabel': result['plabel'],
                         'pdescription': result['pdescription']})
     cursor.close()
-    table = People(results)
+    table = PeopleResults(results)
     table.border = True
     return render_template('people.html', table=table)
 
@@ -297,7 +410,7 @@ def add_people():
     curpid = cursor.next()[0] + 1
     cursor.close()
     try:
-        # if violate ICs, redirect to another add payment/deposit option page
+        # if violate ICs, redirect to another add people page
 
         g.conn.execute("INSERT INTO People(pid, pname, plabel, pdescription, uid) VALUES "
                        "(%s,  %s, %s, %s, %s);", (curpid, POST_PNAME, POST_PLABEL, POST_PDESCRIPTION, session['uid']))
