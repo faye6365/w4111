@@ -244,6 +244,116 @@ def delete_paydeposit(oid):
     return redirect(url_for("paydeposit"))
 
 
+##################################################################################
+# Use Flask_table module to generate html table for People
+# (third-party library)
+##################################################################################
+class People(Table):
+    pid = Col('Id', show=False)
+    pname = Col('Name')
+    plabel = Col('Label')
+    pdescription = Col('Description')
+    # Called edit_people() when the link is clicked.
+    edit = LinkCol('Edit', 'edit_people', url_kwargs=dict(pid='pid'))
+    # Called delete_people() when the link is clicked.
+    delete = LinkCol('Delete', 'delete_people', url_kwargs=dict(pid='pid'))
+
+
+##################################################################################
+# view people
+##################################################################################
+@app.route('/people', methods=['POST', 'GET'])
+def people():
+    cursor = g.conn.execute("SELECT * FROM People WHERE uid = %s ORDER BY pid", (session['uid'],))
+    results = []
+    for result in cursor:
+        results.append({'pid': result['pid'],
+                        'pname': result['pname'],
+                        'plabel': result['plabel'],
+                        'pdescription': result['pdescription']})
+    cursor.close()
+    table = People(results)
+    table.border = True
+    return render_template('people.html', table=table)
+
+
+##################################################################################
+# add new people
+##################################################################################
+@app.route('/add_people', methods=['POST', 'GET'])
+def add_people():
+    if request.method == 'GET':
+        return render_template("add_people.html")
+
+    POST_PNAME = request.form['pname']
+    POST_PLABEL = request.form['plabel']
+    POST_PDESCRIPTION = request.form['pdescription']
+    if not POST_PNAME:
+        flash('name should not be null.')
+        return redirect(url_for('add_people'))
+
+    # create new record in db
+    cursor = g.conn.execute("SELECT MAX(pid) FROM People;")
+    curpid = cursor.next()[0] + 1
+    cursor.close()
+    try:
+        # if violate ICs, redirect to another add payment/deposit option page
+
+        g.conn.execute("INSERT INTO People(pid, pname, plabel, pdescription, uid) VALUES "
+                       "(%s,  %s, %s, %s, %s);", (curpid, POST_PNAME, POST_PLABEL, POST_PDESCRIPTION, session['uid']))
+    except:
+        flash('People (Payer/Payee) cannot be created.')
+        return redirect(url_for('add_people'))
+    flash('People (Payer/Payee) created.')
+    return redirect(url_for('people'))
+
+
+##################################################################################
+# edit people record
+##################################################################################
+@app.route('/edit_people/<int:pid>', methods=['GET', 'POST'])
+def edit_people(pid):
+    if request.method == 'GET':
+        cursor = g.conn.execute("SELECT * FROM People WHERE pid = %s", (pid,))
+        record = cursor.next()
+        cursor.close()
+        return render_template("edit_people.html", pid=pid, pname=record['pname'],
+                               plabel=record['plabel'], pdescription=record['pdescription'])
+
+    POST_PNAME = request.form['pname'].rstrip()
+    POST_PLABEL = request.form['plabel'].rstrip()
+    POST_PDESCRIPTION = request.form['pdescription'].rstrip()
+    if not POST_PNAME:
+        flash('name should not be null.')
+        return redirect('/edit_people/{pid}'.format(pid=pid))
+
+    try:
+        g.conn.execute("UPDATE People SET pname=%s, plabel=%s, pdescription=%s "
+                       "WHERE pid=%s;", (POST_PNAME, POST_PLABEL, POST_PDESCRIPTION, pid))
+    except:
+        flash('People (Payer/Payee) cannot be updated!')
+        return redirect(url_for('paydeposit'))
+    flash('People (Payer/Payee) updated successfully!')
+    return redirect(url_for('people'))
+
+
+##################################################################################
+# delete people record
+##################################################################################
+@app.route('/delete_people/<int:pid>', methods=['GET', 'POST'])
+def delete_people(pid):
+    if request.method == 'GET':
+        return render_template("delete_people.html", pid=pid)
+
+    # delete the item from the database
+    try:
+        g.conn.execute("DELETE FROM People WHERE pid = %s;", (pid,))
+        flash('People (Payer/Payee) deleted successfully!')
+    except:
+        flash('People (Payer/Payee) cannot be deleted!')
+        return redirect(url_for("people"))
+    return redirect(url_for("people"))
+
 if __name__ == "__main__":
   import click
 
@@ -269,5 +379,5 @@ if __name__ == "__main__":
     print "running on %s:%d" % (HOST, PORT)
     app.run(host=HOST, port=PORT, debug=debug, threaded=threaded)
 
-  app.secret_key = 'supersupersupersecret'
+  app.secret_key = 'supersupersupersecretkey'
   run()
