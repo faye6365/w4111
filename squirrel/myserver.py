@@ -40,7 +40,7 @@ def before_request():
   try:
     g.conn = engine.connect()
   except:
-    print "uh oh, problem connecting to database"
+    print ("uh oh, problem connecting to database")
     import traceback; traceback.print_exc()
     g.conn = None
 
@@ -204,8 +204,8 @@ def view_trackingaccount(aid):
         table = TradeResults(results)
         table.border = True
         return render_template("view_trackingaccount.html", aid=aid, table=table)
-
-    return render_template("view_trackingaccount.html", aid=aid, table=None)
+    text = "No Transactions from this period"
+    return render_template("view_trackingaccount.html", aid=aid, table=text)
 
 
 ##################################################################################
@@ -533,7 +533,7 @@ if __name__ == "__main__":
     """
 
     HOST, PORT = host, port
-    print "running on %s:%d" % (HOST, PORT)
+    print ("running on %s:%d" % (HOST, PORT))
     app.run(host=HOST, port=PORT, debug=debug, threaded=threaded)
 
   app.secret_key = 'supersupersupersecretkey'
