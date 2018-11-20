@@ -2,7 +2,7 @@
 {% block body %}
 <br>
 <form action="/view_trackingaccount/{{ aid }}" method="POST">
-  <input type="month" name="month">
+  <input type="month" name="month" min="2000-01" max = "2019-12" value = {{dateSendBack}}>
   <input type="submit" value="Submit">
 </form>
 <br>

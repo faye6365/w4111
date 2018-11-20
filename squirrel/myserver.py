@@ -64,12 +64,18 @@ def index():
         uid = session['uid']
 
         # retrieve the name of the user for greeting message
+        
+        #storing sql query as a string variable protexts against sql injections (I think)
+        #qname = "SELECT name FROM Users WHERE uid = %s;"
+        #cursor = g.conn.execute(qname, (uid,))
         cursor = g.conn.execute("SELECT name FROM Users "
-                                "WHERE uid = %s", (uid,))
+                               "WHERE uid = %s", (uid,))
         name = cursor.next()[0]
         cursor.close()
 
         # tracking account table
+        #qtacc = "SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid;"
+        #cursor = g.conn.execute(qtacc, (session['uid'],))
         cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid;", (session['uid'],))
         results = []
         for result in cursor:
@@ -97,9 +103,11 @@ def login():
     # check if there is matched user record in the db
     if 'uid' not in session:
         try:
+            #qlogin = "SELECT uid FROM Users WHERE username = %s AND password = %s;"
+            #cursor = g.conn.execute(qlogin, (POST_USERNAME, POST_PASSWORD))
             cursor = g.conn.execute("SELECT uid FROM Users "
-                                    "WHERE username = %s AND "
-                                    "password = %s;", (POST_USERNAME, POST_PASSWORD))
+                                   "WHERE username = %s AND "
+                                  "password = %s;", (POST_USERNAME, POST_PASSWORD))
             session['uid'] = cursor.next()[0]
             cursor.close()
         except:
@@ -141,6 +149,8 @@ def signup():
     cursor.close()
     try:
         # usernames are set to be unique, if violate ICs, redirect to another sign-up page
+        #qNewUser = "INSERT INTO Users(uid, username, name, password) VALUES (%s, %s, %s, %s);"
+        #g.conn.execute(qNewUser, (curuid, POST_USERNAME, POST_NAME, POST_PASSWORD))
         g.conn.execute("INSERT INTO Users(uid, username, name, password) VALUES"
                         "(%s, %s, %s, %s);", (curuid, POST_USERNAME, POST_NAME, POST_PASSWORD))
     except:
@@ -203,7 +213,8 @@ def view_trackingaccount(aid):
         cursor.close()
         table = TradeResults(results)
         table.border = True
-        return render_template("view_trackingaccount.html", aid=aid, table=table)
+        yearMonthSendBack = POST_YEARMONTH
+        return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=yearMonthSendBack)
     text = "No Transactions from this period"
     return render_template("view_trackingaccount.html", aid=aid, table=text)
 
@@ -228,8 +239,10 @@ def add_trackingaccount():
     cursor.close()
     try:
         # if violate ICs, redirect to another add tracking account page
-        g.conn.execute("INSERT INTO Tracking_Accounts(aid, aname, adescription, uid) VALUES "
-                       "(%s,  %s, %s, %s);", (curaid, POST_ANAME, POST_ADESCRIPTION, session['uid']))
+        qInsertTAcc = "INSERT INTO Tracking_Accounts(aid, aname, adescription, uid) VALUES (%s,  %s, %s, %s);"
+        g.conn.execute(qInsertTAcc, (curaid, POST_ANAME, POST_ADESCRIPTION, session['uid']))
+        #g.conn.execute("INSERT INTO Tracking_Accounts(aid, aname, adescription, uid) VALUES "
+        #               "(%s,  %s, %s, %s);", (curaid, POST_ANAME, POST_ADESCRIPTION, session['uid']))
     except:
         flash('Tracking account cannot be created.')
         return redirect(url_for('add_trackingaccount'))
@@ -243,7 +256,9 @@ def add_trackingaccount():
 @app.route('/edit_trackingaccount/<int:aid>', methods=['GET', 'POST'])
 def edit_trackingaccount(aid):
     if request.method == 'GET':
-        cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE aid = %s;", (aid,))
+        qTAccInfo = "SELECT * FROM Tracking_Accounts WHERE aid = %s;"
+        cursor = g.conn.execute(qTAccInfo, (aid,))
+        #cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE aid = %s;", (aid,))
         record = cursor.next()
         cursor.close()
         return render_template("edit_trackingaccount.html", aid=aid, aname=record['aname'],
@@ -256,8 +271,10 @@ def edit_trackingaccount(aid):
         return redirect('/edit_trackingaccount/{aid}'.format(aid=aid))
 
     try:
-        g.conn.execute("UPDATE Tracking_Accounts SET aname=%s, adescription=%s "
-                       "WHERE aid=%s;", (POST_ANAME, POST_ADESCRIPTION, aid))
+        qUpdateTAcc = "UPDATE Tracking_Accounts SET aname=%s, adescription=%s WHERE aid=%s;"
+        #g.conn.execute("UPDATE Tracking_Accounts SET aname=%s, adescription=%s "
+        #               "WHERE aid=%s;", (POST_ANAME, POST_ADESCRIPTION, aid))
+        g.conn.execute(qUpdateTAcc, (POST_ANAME, POST_ADESCRIPTION, aid))
     except:
         flash('Tracking account cannot be updated!')
         return redirect(url_for('paydeposit'))
@@ -275,9 +292,11 @@ def delete_trackingaccount(aid):
 
     POST_PASSWORD = str(request.form['password'])
     try:
-        cursor = g.conn.execute("SELECT * FROM Users "
-                                "WHERE uid = %s AND "
-                                "password = %s;", (session['uid'], POST_PASSWORD))
+        qUserCheck = "Select * FROM Users Where uid = %s AND password = %s;"
+        cursor = g.conn.execute(qUserCheck, (session['uid'], POST_PASSWORD))
+        #cursor = g.conn.execute("SELECT * FROM Users "
+        #                        "WHERE uid = %s AND "
+        #                        "password = %s;", (session['uid'], POST_PASSWORD))
         cursor.close()
     except:
         flash('password not matched! not authorized to delete the tracking_account')
@@ -285,6 +304,7 @@ def delete_trackingaccount(aid):
 
     # delete the item from the database
     try:
+        qDelTAcc = "DELETE FROM Tracking_Accounts WHERE aid = %s;"
         g.conn.execute("DELETE FROM Tracking_Accounts WHERE aid = %s;", (aid,))
         flash('Tracking account deleted successfully!')
     except:
