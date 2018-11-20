@@ -10,6 +10,7 @@ import pdb
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
+from datetime import datetime
 from flask import Flask, request, render_template, g, redirect, Response, session, flash, url_for
 from flask_table import Table, Col, LinkCol
 
@@ -213,10 +214,14 @@ def view_trackingaccount(aid):
         cursor.close()
         table = TradeResults(results)
         table.border = True
-        yearMonthSendBack = POST_YEARMONTH
-        return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=yearMonthSendBack)
+        if not results:
+            table = "No transations for {{POST_YEARMONTH}}"
+        return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=POST_YEARMONTH)
+    currMonth = str(datetime.now().month)
+    currYear = str(datetime.now().year)
+    currMonthYear = currYear + "-" + currMonth
     text = "No Transactions from this period"
-    return render_template("view_trackingaccount.html", aid=aid, table=text)
+    return render_template("view_trackingaccount.html", aid=aid, table=text, dateSendBack = currMonthYear)
 
 
 ##################################################################################
