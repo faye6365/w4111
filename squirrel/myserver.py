@@ -264,8 +264,6 @@ def transactionTableTEST(aid, year, month, monthOrAll):
                                 "SELECT * FROM transactions order by tdate asc;",
                                 (aid, year, month, year, month, aid, year, month, year, month))
         for result in cursor:
-            if result['tdescription'] == "":
-                result['tdescription'] = '-----------'
             results.append({'tid': result['tid'],
                             'tdate': result['tdate'],
                             'tdescription': result['tdescription'],
