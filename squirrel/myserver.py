@@ -191,7 +191,29 @@ class TradeResults(Table):
     # # Called delete_trackingaccount() when the link is clicked.
     # delete = LinkCol('Delete', 'delete_trackingaccount', url_kwargs=dict(aid='aid'))
 
+##################################################################################
+# Attempt to make a method/function for producing transaction tables. That way we can
+# simplify the view_tracking account route
+# TODO: This is a raw version of the transaction table method
+##################################################################################
 
+def transactionTable(aid, year, month):
+    results = []
+    cursor = g.conn.execute("SELECT * FROM Expenses WHERE aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\';",
+                                (aid, year, month, year, month))
+    for result in cursor:
+            results.append({'tid': result['tid'],
+                            'tdate': result['tdate'],
+                            'tdescription': result['tdescription'],
+                            'tamount': result['tamount']})
+    cursor.close()
+    table = TradeResults(results)
+    table.border = True
+    if not results:
+        table = "No transactions for this period"
+    return table
 ##################################################################################
 # view trades/statement in the tracking account
 # TODO: This is a raw version of view_trackingacount
@@ -199,29 +221,15 @@ class TradeResults(Table):
 @app.route('/view_trackingaccount/<int:aid>', methods=['GET', 'POST'])
 def view_trackingaccount(aid):
     if request.method == 'POST':
-        results = []
         POST_YEARMONTH = str(request.form['month'])
         POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
-        cursor = g.conn.execute("SELECT * FROM Expenses WHERE aid = %s AND "
-                                "tdate >= DATE \'%s-%s-1\' AND "
-                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\';",
-                                (aid, POST_YEAR, POST_MONTH, POST_YEAR, POST_MONTH))
-        for result in cursor:
-            results.append({'tid': result['tid'],
-                            'tdate': result['tdate'],
-                            'tdescription': result['tdescription'],
-                            'tamount': result['tamount']})
-        cursor.close()
-        table = TradeResults(results)
-        table.border = True
-        if not results:
-            table = "No transations for {{POST_YEARMONTH}}"
+        table = transactionTable(aid, POST_YEAR, POST_MONTH)
         return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=POST_YEARMONTH)
-    currMonth = str(datetime.now().month)
-    currYear = str(datetime.now().year)
-    currMonthYear = currYear + "-" + currMonth
-    text = "No Transactions from this period"
-    return render_template("view_trackingaccount.html", aid=aid, table=text, dateSendBack = currMonthYear)
+    currMonth = datetime.now().month
+    currYear = datetime.now().year
+    currMonthYear = str(currYear) + "-" + str(currMonth)
+    table = transactionTable(aid, currYear, currMonth)
+    return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear)
 
 
 ##################################################################################

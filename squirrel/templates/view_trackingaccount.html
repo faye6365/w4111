@@ -3,15 +3,20 @@
 <br>
 <form action="/view_trackingaccount/{{ aid }}" method="POST">
   <input type="month" name="month" min="2000-01" max = "2019-12" value = {{dateSendBack}}>
+  <input type="radio" name="transactions" value="byMonth" checked="checked">View by Month 
+  <input type="radio" name="transactions" value="byAll">View all Transactions
   <input type="submit" value="Submit">
+</form>
+<!--<form action= "/view_trackingaccount/{{ aid }}" method="POST">
+  <input type="submit" name="viewAll" value="View all transactions">-->
 </form>
 <br>
 <br>
 {{table}}
 <br>
+{{radioCheck}}
 <!--<a href = '/add_trackingaccount'>click here to add a trackingaccount</a>-->
 <br>
-{{dateSendBack}}
 <br>
 <b><a href = '/'>click here to return the the home page</a> </b>
 <br>
