@@ -185,6 +185,9 @@ class TradeResults(Table):
     tdate = Col('Date')
     tdescription = Col('Description')
     tamount = Col('Amount')
+    tlabel = Col('Label')
+    tperson = Col('From whom?')
+    tpayment = Col('Payment type')
 
     # # Called edit_trackingaccount() when the link is clicked.
     # edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
@@ -194,26 +197,112 @@ class TradeResults(Table):
 ##################################################################################
 # Attempt to make a method/function for producing transaction tables. That way we can
 # simplify the view_tracking account route
-# TODO: This is a raw version of the transaction table method
+# TODO: developing the right output of transactions. Expenses need a minus sign in front
+# of them.  
 ##################################################################################
 
-def transactionTable(aid, year, month):
-    results = []
-    cursor = g.conn.execute("SELECT * FROM Expenses WHERE aid = %s AND "
+def transactionTable(aid, year, month, monthOrAll):
+    if monthOrAll == 0:
+        results = []
+        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s AND "
                                 "tdate >= DATE \'%s-%s-1\' AND "
-                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\';",
-                                (aid, year, month, year, month))
-    for result in cursor:
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
+                                "UNION "
+                                "SELECT * FROM incomes WHERE aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
+                                "SELECT * FROM transactions order by tdate asc;",
+                                (aid, year, month, year, month, aid, year, month, year, month))
+        for result in cursor:
             results.append({'tid': result['tid'],
                             'tdate': result['tdate'],
                             'tdescription': result['tdescription'],
-                            'tamount': result['tamount']})
-    cursor.close()
-    table = TradeResults(results)
-    table.border = True
-    if not results:
-        table = "No transactions for this period"
+                            'tamount': result['tamount'],
+                            'tlabel': result['expense_label'],
+                            'tperson': result['pid'],
+                            'tpayment': result['oid']})
+        cursor.close()
+        table = TradeResults(results)
+        table.border = True
+        if not results:
+            table = "No transactions for this period"
+        return table
+    elif monthOrAll == 1:
+        results = []
+        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s "
+                                "UNION "
+                                "SELECT * FROM incomes WHERE aid = %s) "
+                                "SELECT * FROM transactions order by tdate asc", 
+                                (aid, aid))
+        for result in cursor:
+           results.append({'tid': result['tid'],
+                            'tdate': result['tdate'],
+                            'tdescription': result['tdescription'],
+                            'tamount': result['tamount'],
+                            'tlabel': result['expense_label'],
+                            'tperson': result['pid'],
+                            'tpayment': result['oid']})
+        cursor.close()
+        table = TradeResults(results)
+        table.border = True
+        if not results:
+            table = "No transactions for this period"
+        return table
+    table = "Something went wrong. Try submitting a time period, again."
     return table
+
+def transactionTableTEST(aid, year, month, monthOrAll):
+    if monthOrAll == 0:
+        results = []
+        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
+                                "UNION "
+                                "SELECT * FROM incomes WHERE aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
+                                "SELECT * FROM transactions order by tdate asc;",
+                                (aid, year, month, year, month, aid, year, month, year, month))
+        for result in cursor:
+            if result['tdescription'] == "":
+                result['tdescription'] = '-----------'
+            results.append({'tid': result['tid'],
+                            'tdate': result['tdate'],
+                            'tdescription': result['tdescription'],
+                            'tamount': result['tamount'],
+                            'tlabel': result['expense_label'],
+                            'tperson': result['pid'],
+                            'tpayment': result['oid']})
+        cursor.close()
+        table = TradeResults(results)
+        table.border = True
+        if not results:
+            table = "No transactions for this period"
+        return table
+    elif monthOrAll == 1:
+        results = []
+        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s "
+                                "UNION "
+                                "SELECT * FROM incomes WHERE aid = %s) "
+                                "SELECT * FROM transactions order by tdate asc", 
+                                (aid, aid))
+        for result in cursor:
+           results.append({'tid': result['tid'],
+                            'tdate': result['tdate'],
+                            'tdescription': result['tdescription'],
+                            'tamount': result['tamount'],
+                            'tlabel': result['expense_label'],
+                            'tperson': result['pid'],
+                            'tpayment': result['oid']})
+        cursor.close()
+        table = TradeResults(results)
+        table.border = True
+        if not results:
+            table = "No transactions for this period"
+        return table
+    table = "Something went wrong. Try submitting a time period, again."
+    return table
+
 ##################################################################################
 # view trades/statement in the tracking account
 # TODO: This is a raw version of view_trackingacount
@@ -221,15 +310,24 @@ def transactionTable(aid, year, month):
 @app.route('/view_trackingaccount/<int:aid>', methods=['GET', 'POST'])
 def view_trackingaccount(aid):
     if request.method == 'POST':
-        POST_YEARMONTH = str(request.form['month'])
-        POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
-        table = transactionTable(aid, POST_YEAR, POST_MONTH)
-        return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=POST_YEARMONTH)
+        if "byMonth" == request.form['transactions']:
+            try:
+                POST_YEARMONTH = str(request.form['month'])
+                POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
+                table = transactionTableTEST(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
+                return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "")
+            except:
+                flash('Make sure you fill out both the month and the year.')
+                return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "")
+        elif "byAll" == request.form['transactions']:
+            table = transactionTableTEST(aid, 0000, 00, 1) #1 tells the function to execute for all transactions
+            return render_template("view_trackingaccount.html", aid = aid, table = table, byMonth = "", byAll = "checked")
+        return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "")
     currMonth = datetime.now().month
     currYear = datetime.now().year
     currMonthYear = str(currYear) + "-" + str(currMonth)
-    table = transactionTable(aid, currYear, currMonth)
-    return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear)
+    table = transactionTable(aid, currYear, currMonth, 0)
+    return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear, byMonth = "checked", byAll = "")
 
 
 ##################################################################################
