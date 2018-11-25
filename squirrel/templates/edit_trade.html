@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block body %}
+<h1>Edit Trade</h1>
+<br>
+<form action="/edit_trade/{{ aid }}_{{ tid }}_{{ ttype }}" method="POST">
+    Date:
+    <input type="date" name="tdate" value="{{ pretdate }}" required>
+    <br>
+    Payee:
+    <select name="pid" id="pid">
+      {% for pid, person in people:%}
+        {% if pid == prepid: %}
+            <option value="{{ pid }}" selected>{{ person }}</option>
+        {% else: %}
+            <option value="{{ pid }}">{{ person }}</option>
+        {% endif %}
+      {% endfor %}
+    </select>
+    <br>
+    Payment Option:
+    <select name="oid" id="oid">
+      {% for oid, option in options:%}
+        {% if oid == preoid: %}
+            <option value="{{ oid }}" selected>{{ option }}</option>
+        {% else: %}
+            <option value="{{ oid }}">{{ option }}</option>
+        {% endif %}
+      {% endfor %}
+    </select>
+    <br>
+    Label:
+    <input list="labels" name="tlabel" value="{{ pretlabel }}">
+    <datalist id="labels">
+      {% for tlabel in labels:%}
+        <option value="{{ tlabel }}">{{ tlabel }}</option>
+      {% endfor %}
+    </datalist>
+    <br>
+    Amount:
+    <input type="number" name="tamount" min="0.01" step="0.01" value="{{ pretamount }}" required>
+    <br>
+    Description:
+    <input type="text" name="tdescription" value="{{ pretdescription }}"  >
+    <br>
+    <input type="submit" value="Edit">
+</form>
+
+<b><a href = '/view_trackingaccount/{{ aid }}'>click here to go back</a></b>
+{% endblock %}

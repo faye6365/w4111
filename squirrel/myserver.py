@@ -191,15 +191,14 @@ class TradeResults(Table):
     tamount = Col('Amount')
     tdescription = Col('Description')
 
-    # # Called edit_trackingaccount() when the link is clicked.
-    # edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
+    # # Called edit_trade() when the link is clicked.
+    edit = LinkCol('Edit', 'edit_trade', url_kwargs=dict(aid='aid', tid='tid', ttype='ttype'))
     # Called delete_trade() when the link is clicked.
     delete = LinkCol('Delete', 'delete_trade', url_kwargs=dict(aid='aid', tid='tid', ttype='ttype'))
 
 ##################################################################################
 # Attempt to make a method/function for producing transaction tables. That way we can
 # simplify the view_tracking account route
-# TODO: add features to edit trades.
 ##################################################################################
 
 def transactionTable(aid, year, month, monthOrAll):
@@ -420,6 +419,58 @@ def add_income(aid):
         flash('Income cannot be created.')
         return redirect('/add_income/{aid}'.format(aid=aid))
     flash('Income created.')
+    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
+
+##################################################################################
+# edit a trade
+##################################################################################
+@app.route('/edit_trade/<int:aid>_<int:tid>_<string:ttype>', methods=['GET', 'POST'])
+def edit_trade(aid, tid, ttype):
+    # Get the selection list and data list from database
+    presets = retrieveTradePreset(aid, ttype)
+    people = presets['people']
+    options = presets['options']
+    labels = presets['labels']
+
+    if request.method == 'GET':
+        if ttype == 'Expense':
+            cursor = g.conn.execute("SELECT * FROM Expenses WHERE tid = %s;", (tid,))
+            record = cursor.next()
+            tlabel = record['expense_label']
+            cursor.close()
+        else:
+            cursor = g.conn.execute("SELECT * FROM Incomes WHERE tid = %s;", (tid,))
+            record = cursor.next()
+            tlabel = record['income_label']
+            cursor.close()
+        return render_template("edit_trade.html", aid=aid, tid=tid, ttype=ttype, prepid=record['pid'],
+                               preoid=record['oid'], pretdate=record['tdate'], pretlabel=tlabel,
+                               pretdescription=record['tdescription'], pretamount=record['tamount'],
+                               people=people, options=options, labels=labels)
+
+    POST_AID = aid
+    POST_PID = request.form['pid']
+    POST_OID = request.form['oid']
+    POST_TDATE = request.form['tdate']
+    POST_TLABEL = request.form['tlabel'].rstrip()
+    POST_TDESCRIPTION = request.form['tdescription'].rstrip()
+    POST_TAMOUNT = request.form['tamount']
+
+    try:
+        if ttype == 'Expense':
+            g.conn.execute("UPDATE Expenses SET tdate = DATE %s, tdescription = %s, tamount = %s, aid = %s, pid = %s, "
+                           "oid = %s, expense_label = %s "
+                           "WHERE tid = %s;", (POST_TDATE, POST_TDESCRIPTION, POST_TAMOUNT, POST_AID, POST_PID,
+                                               POST_OID, POST_TLABEL, tid))
+        else:
+            g.conn.execute("UPDATE Incomes SET tdate = DATE %s, tdescription = %s, tamount = %s, aid = %s, pid = %s, "
+                           "oid = %s, income_label = %s "
+                           "WHERE tid = %s;", (POST_TDATE, POST_TDESCRIPTION, POST_TAMOUNT, POST_AID, POST_PID,
+                                               POST_OID, POST_TLABEL, tid))
+    except:
+        flash('Trade cannot be updated!')
+        return redirect('/edit_trade/{aid}_{tid}_{ttype}'.format(aid=aid, tid=tid, ttype=ttype))
+    flash('Trade updated successfully!')
     return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
 
 ##################################################################################
