@@ -181,10 +181,12 @@ class TrackingAccountResults(Table):
 # (third-party library)
 ##################################################################################
 class TradeResults(Table):
+    aid = Col('Aid', show = False)
     tid = Col('Id', show=False)
     tdate = Col('Date')
     tperson = Col('From/To Whom')
     tpayment = Col('Payment/Deposit Options')
+    ttype = Col('Type')
     tlabel = Col('Label')
     tamount = Col('Amount')
     tdescription = Col('Description')
@@ -192,24 +194,23 @@ class TradeResults(Table):
     # # Called edit_trackingaccount() when the link is clicked.
     # edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
     # Called delete_trade() when the link is clicked.
-    # delete = LinkCol('Delete', 'delete_trade', url_kwargs=dict(tid='tid'))
+    delete = LinkCol('Delete', 'delete_trade', url_kwargs=dict(aid='aid', tid='tid', ttype='ttype'))
 
 ##################################################################################
 # Attempt to make a method/function for producing transaction tables. That way we can
 # simplify the view_tracking account route
-# TODO: developing the right output of transactions. Expenses need a minus sign in front
-# of them.  
+# TODO: add features to add trades and edit trades.
 ##################################################################################
 
 def transactionTable(aid, year, month, monthOrAll):
     if monthOrAll == 0:
         results = []
-        cursor = g.conn.execute("WITH transactions as (SELECT tid, tdate, tdescription, -1*tamount AS tamount, expense_label, oid, pid "
+        cursor = g.conn.execute("WITH transactions as (SELECT tid, tdate, tdescription, -1*tamount AS tamount, expense_label, oid, pid, 1 AS isexpense "
                                 "FROM expenses WHERE aid = %s AND "
                                 "tdate >= DATE \'%s-%s-1\' AND "
                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
                                 "UNION "
-                                "SELECT tid, tdate, tdescription, tamount, income_label, oid, pid "
+                                "SELECT tid, tdate, tdescription, tamount, income_label, oid, pid, 0 AS isexpense "
                                 "FROM incomes WHERE aid = %s AND "
                                 "tdate >= DATE \'%s-%s-1\' AND "
                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
@@ -221,13 +222,15 @@ def transactionTable(aid, year, month, monthOrAll):
         for result in cursor:
             if result['tdescription'] == "":
                 result['tdescription'] = '-----------'
-            results.append({'tid': result['tid'],
+            results.append({'aid': aid,
+                            'tid': result['tid'],
                             'tdate': result['tdate'],
                             'tdescription': result['tdescription'],
                             'tamount': result['tamount'],
                             'tlabel': result['expense_label'],
                             'tperson': result['pname'],
-                            'tpayment': result['oname']})
+                            'tpayment': result['oname'],
+                            'ttype': 'Expense' if result['isexpense'] else 'Income'})
         cursor.close()
         table = TradeResults(results)
         table.border = True
@@ -236,10 +239,10 @@ def transactionTable(aid, year, month, monthOrAll):
         return table
     elif monthOrAll == 1:
         results = []
-        cursor = g.conn.execute("WITH transactions as (SELECT tid, tdate, tdescription, -1*tamount AS tamount, expense_label, oid, pid "
+        cursor = g.conn.execute("WITH transactions as (SELECT tid, tdate, tdescription, -1*tamount AS tamount, expense_label, oid, pid, 1 AS isexpense "
                                 "FROM expenses WHERE aid = %s "
                                 "UNION "
-                                "SELECT tid, tdate, tdescription, tamount, income_label, oid, pid "
+                                "SELECT tid, tdate, tdescription, tamount, income_label, oid, pid, 0 AS isexpense "
                                 "FROM incomes WHERE aid = %s) "
                                 "SELECT * FROM transactions T "
                                 "LEFT OUTER JOIN Payment_Deposit_Options PDO ON T.oid = PDO.oid "
@@ -247,13 +250,17 @@ def transactionTable(aid, year, month, monthOrAll):
                                 "ORDER BY T.tdate asc;",
                                 (aid, aid))
         for result in cursor:
-           results.append({'tid': result['tid'],
+           if result['tdescription'] == "":
+                result['tdescription'] = '-----------'
+           results.append({ 'aid': aid,
+                            'tid': result['tid'],
                             'tdate': result['tdate'],
                             'tdescription': result['tdescription'],
                             'tamount': result['tamount'],
                             'tlabel': result['expense_label'],
                             'tperson': result['pname'],
-                            'tpayment': result['oname']})
+                            'tpayment': result['oname'],
+                            'ttype': 'Expense' if result['isexpense'] else 'Income'})
         cursor.close()
         table = TradeResults(results)
         table.border = True
@@ -341,6 +348,25 @@ def view_trackingaccount(aid):
     table = transactionTable(aid, currYear, currMonth, 0)
     return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear, byMonth = "checked", byAll = "")
 
+##################################################################################
+# delete a trade
+##################################################################################
+@app.route('/delete_trade/<int:aid>_<int:tid>_<string:ttype>', methods=['GET', 'POST'])
+def delete_trade(aid, tid, ttype):
+    if request.method == 'GET':
+        return render_template("delete_trade.html", aid=aid, tid=tid, ttype=ttype)
+
+    # delete the item from the database
+    try:
+        if ttype == 'Expense':
+            g.conn.execute("DELETE FROM Expenses WHERE tid = %s;", (tid,))
+        else:
+            g.conn.execute("DELETE FROM Incomes WHERE tid = %s;", (tid,))
+        flash('Trade deleted successfully!')
+    except:
+        flash('Trade cannot be deleted!')
+        return redirect("/view_trackingaccount/{aid}".format(aid=aid))
+    return redirect("/view_trackingaccount/{aid}".format(aid=aid))
 
 ##################################################################################
 # add new tracking account

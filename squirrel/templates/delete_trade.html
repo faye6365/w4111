@@ -1,0 +1,7 @@
+{% block body %}
+<form action="/delete_trade/{{ aid }}_{{ tid }}_{{ ttype }}" method="post">
+    <input type="submit" value="Delete">
+</form>
+<br>
+<b><a href = '/view_trackingaccount/{{ aid }}'>click here to go back</a></b>
+{% endblock %}
