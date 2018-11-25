@@ -1,19 +1,19 @@
 {% extends "layout.html" %}
 {% block body %}
-<h1>New Expense</h1>
+<h1>New Income</h1>
 <br>
-<form action="/add_expense/{{ aid }}" method="POST">
+<form action="/add_income/{{ aid }}" method="POST">
     Date:
     <input type="date" name="tdate">
     <br>
-    Payee:
+    Payer:
     <select name="pid" id="pid">
       {% for pid, person in people:%}
         <option value="{{ pid }}">{{ person }}</option>
       {% endfor %}
     </select>
     <br>
-    Payment Option:
+    Deposit Option:
     <select name="oid" id="oid">
       {% for oid, option in options:%}
         <option value="{{ oid }}">{{ option }}</option>

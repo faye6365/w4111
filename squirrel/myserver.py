@@ -296,37 +296,131 @@ def view_trackingaccount(aid):
     table = transactionTable(aid, currYear, currMonth, 0)
     return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear, byMonth = "checked", byAll = "")
 
+##################################################################################
+# func to retrieve pre-set value lists for adding/editing an income/expense
+##################################################################################
+def retrieveTradePreset(aid, type='Expense'):
+
+    people = [[None, 'None']] # User can add an expense without specifying the payer/payee
+    options = [[None, 'None']] # User can add an expense without specifying the payment/deposit option
+    labels = [None]
+    uid = session['uid']
+
+    # Retrieve all Payment_Deposit_Options of the user to make the selection list
+    cursor = g.conn.execute("SELECT * FROM Payment_Deposit_Options WHERE uid = %s;", (uid,))
+    for result in cursor:
+        options.append([result['oid'],
+                        "{oname} ({olabel}, {odescription})".format(oname=result['oname'], olabel=result['olabel'],
+                                                                   odescription=result['odescription'])])
+    cursor.close()
+
+    # Retrieve all People of the user to make the selection list
+    cursor = g.conn.execute("SELECT * FROM People WHERE uid = %s;", (uid,))
+    for result in cursor:
+        people.append([result['pid'],
+                        "{pname} ({plabel}, {pdescription})".format(pname=result['pname'], plabel=result['plabel'],
+                                                                   pdescription=result['pdescription'])])
+    cursor.close()
+
+    # Retrieve all Expense/Income labels of the account to make the data list
+    if type == 'Expense':
+        cursor = g.conn.execute("SELECT DISTINCT expense_label FROM Expenses WHERE aid = %s;", (aid,))
+        for result in cursor:
+            labels.append(result['expense_label'])
+        cursor.close()
+    else:
+        cursor = g.conn.execute("SELECT DISTINCT income_label FROM Incomes WHERE aid = %s;", (aid,))
+        for result in cursor:
+            labels.append(result['income_label'])
+        cursor.close()
+
+    return dict(people=people, options=options, labels=labels)
 
 ##################################################################################
 # add an expense
 ##################################################################################
-@app.route('/add_expense', methods=['POST', 'GET'])
-def add_expense():
-    musicpath = ['A', 'B', 'C']
+@app.route('/add_expense/<int:aid>', methods=['POST', 'GET'])
+def add_expense(aid):
+
+    # Get the selection list and data list from database
+    presets = retrieveTradePreset(aid, 'Expense')
+    people = presets['people']
+    options = presets['options']
+    labels = presets['labels']
+
     if request.method == 'GET':
-        return render_template("add_expense.html", musicpath=musicpath)
-    pdb.set_trace()
-    # POST_ONAME = request.form['oname']
-    # POST_OLABEL = request.form['olabel']
-    # POST_ODESCRIPTION = request.form['odescription']
-    # if not POST_ONAME:
-    #     flash('name should not be null.')
-    #     return redirect(url_for('add_paydeposit'))
-    #
-    # # create new record in db
-    # cursor = g.conn.execute("SELECT MAX(oid) FROM Payment_Deposit_Options;")
-    # curoid = cursor.next()[0] + 1
-    # cursor.close()
-    # try:
-    #     # if violate ICs, redirect to another add payment/deposit option page
-    #
-    #     g.conn.execute("INSERT INTO Payment_Deposit_Options(oid, oname, olabel, odescription, uid) VALUES "
-    #                    "(%s,  %s, %s, %s, %s);", (curoid, POST_ONAME, POST_OLABEL, POST_ODESCRIPTION, session['uid']))
-    # except:
-    #     flash('Payment/deposit option cannot be created.')
-    #     return redirect(url_for('add_paydeposit'))
-    # flash('Option created.')
-    return redirect(url_for('paydeposit'))
+        return render_template("add_expense.html", aid=aid, people=people, options=options, labels=labels)
+
+    POST_AID = aid
+    POST_PID = request.form['pid']
+    POST_OID = request.form['oid']
+    POST_TDATE = request.form['tdate']
+    POST_TLABEL = request.form['tlabel']
+    POST_TDESCRIPTION = request.form['tdescription']
+    POST_TAMOUNT = request.form['tamount']
+
+    # create new record in db
+    cursor = g.conn.execute("SELECT MAX(tid) FROM Expenses;")
+    exptid = cursor.next()[0] + 1
+    cursor.close()
+    cursor = g.conn.execute("SELECT MAX(tid) FROM Incomes;")
+    inctid = cursor.next()[0] + 1
+    cursor.close()
+    curtid = max(exptid, inctid)
+    try:
+        # if violate ICs, redirect to another add expense page
+        g.conn.execute("INSERT INTO Expenses(tid, tdate, tdescription, tamount, aid, pid, oid, expense_label) VALUES "
+                       "(%s,  DATE %s, %s, %s, %s, %s, %s, %s);", (curtid, POST_TDATE, POST_TDESCRIPTION,
+                                                                   POST_TAMOUNT, POST_AID, POST_PID, POST_OID,
+                                                                   POST_TLABEL))
+    except:
+        flash('Expense cannot be created.')
+        return redirect('/add_expense/{aid}'.format(aid=aid))
+    flash('Expense created.')
+    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
+
+##################################################################################
+# add an income
+##################################################################################
+@app.route('/add_income/<int:aid>', methods=['POST', 'GET'])
+def add_income(aid):
+
+    # Get the selection list and data list from database
+    presets = retrieveTradePreset(aid, 'Income')
+    people = presets['people']
+    options = presets['options']
+    labels = presets['labels']
+
+    if request.method == 'GET':
+        return render_template("add_income.html", aid=aid, people=people, options=options, labels=labels)
+
+    POST_AID = aid
+    POST_PID = request.form['pid']
+    POST_OID = request.form['oid']
+    POST_TDATE = request.form['tdate']
+    POST_TLABEL = request.form['tlabel']
+    POST_TDESCRIPTION = request.form['tdescription']
+    POST_TAMOUNT = request.form['tamount']
+
+    # create new record in db
+    cursor = g.conn.execute("SELECT MAX(tid) FROM Expenses;")
+    exptid = cursor.next()[0] + 1
+    cursor.close()
+    cursor = g.conn.execute("SELECT MAX(tid) FROM Incomes;")
+    inctid = cursor.next()[0] + 1
+    cursor.close()
+    curtid = max(exptid, inctid)
+    try:
+        # if violate ICs, redirect to another add expense page
+        g.conn.execute("INSERT INTO Incomes(tid, tdate, tdescription, tamount, aid, pid, oid, income_label) VALUES "
+                       "(%s,  DATE %s, %s, %s, %s, %s, %s, %s);", (curtid, POST_TDATE, POST_TDESCRIPTION,
+                                                                   POST_TAMOUNT, POST_AID, POST_PID, POST_OID,
+                                                                   POST_TLABEL))
+    except:
+        flash('Income cannot be created.')
+        return redirect('/add_income/{aid}'.format(aid=aid))
+    flash('Income created.')
+    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
 
 ##################################################################################
 # delete a trade
