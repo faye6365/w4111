@@ -204,11 +204,13 @@ class TradeResults(Table):
 def transactionTable(aid, year, month, monthOrAll):
     if monthOrAll == 0:
         results = []
-        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s AND "
+        cursor = g.conn.execute("WITH transactions as (SELECT tid, tdate, tdescription, -1*tamount AS tamount, expense_label, oid, pid "
+                                "FROM expenses WHERE aid = %s AND "
                                 "tdate >= DATE \'%s-%s-1\' AND "
                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
                                 "UNION "
-                                "SELECT * FROM incomes WHERE aid = %s AND "
+                                "SELECT tid, tdate, tdescription, tamount, income_label, oid, pid "
+                                "FROM incomes WHERE aid = %s AND "
                                 "tdate >= DATE \'%s-%s-1\' AND "
                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
                                 "SELECT * FROM transactions T "
@@ -217,6 +219,8 @@ def transactionTable(aid, year, month, monthOrAll):
                                 "ORDER BY T.tdate asc;",
                                 (aid, year, month, year, month, aid, year, month, year, month))
         for result in cursor:
+            if result['tdescription'] == "":
+                result['tdescription'] = '-----------'
             results.append({'tid': result['tid'],
                             'tdate': result['tdate'],
                             'tdescription': result['tdescription'],
