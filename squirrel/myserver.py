@@ -73,17 +73,18 @@ def index():
                                "WHERE uid = %s", (uid,))
         name = cursor.next()[0]
         cursor.close()
-
-        # tracking account table
-        #qtacc = "SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid;"
-        #cursor = g.conn.execute(qtacc, (session['uid'],))
+  
         cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid;", (session['uid'],))
         results = []
         for result in cursor:
+            summaryStats = superSum(result['aid'], 0000, 00, 1)
+            summaryStats = summaryStats.split("Net balance: ",1)[1]
             results.append({'aid': result['aid'],
                             'aname': result['aname'],
-                            'adescription': result['adescription']})
+                            'adescription': result['adescription'],
+                            'aNet': summaryStats})
         cursor.close()
+   
         table = TrackingAccountResults(results)
         table.border = True
 
@@ -169,6 +170,7 @@ class TrackingAccountResults(Table):
     aid = Col('Id', show=False)
     aname = Col('Name')
     adescription = Col('Description')
+    aNet = Col('Net Balance')
     # Called edit_trackingaccount() when the link is clicked.
     edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
     # Called delete_trackingaccount() when the link is clicked.
@@ -286,7 +288,12 @@ def superSum(aid, year, month, monthOrAll):
         cursor.close()
         incomeSum = income[0].get('sum')
         expenseSum = expense[0].get('sum')
-        netSum = expenseSum + incomeSum
+        if incomeSum is None:
+            incomeSum = 0000.00
+        if expenseSum is None:
+            expenseSum = 0000.00
+        netSum = float(expenseSum) + float(incomeSum)
+
         return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net balance: " + str(netSum) 
     elif monthOrAll == 1:
         cursor = g.conn.execute("SELECT sum(-1*tamount) as sum FROM expenses where aid = %s", aid)
@@ -299,7 +306,11 @@ def superSum(aid, year, month, monthOrAll):
             income.append({'sum': result['sum']})
         incomeSum = income[0].get('sum')
         expenseSum = expense[0].get('sum')
-        netSum = incomeSum + expenseSum
+        if incomeSum is None:
+            incomeSum = 0000.00
+        if expenseSum is None:
+            expenseSum = 0000.00
+        netSum = float(incomeSum) + float(expenseSum)
         return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net balance: " + str(netSum) 
     return "Could not calculate summary statistics" 
 ##################################################################################
