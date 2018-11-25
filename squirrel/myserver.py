@@ -199,7 +199,7 @@ class TradeResults(Table):
 ##################################################################################
 # Attempt to make a method/function for producing transaction tables. That way we can
 # simplify the view_tracking account route
-# TODO: add features to add trades and edit trades.
+# TODO: add features to edit trades.
 ##################################################################################
 
 def transactionTable(aid, year, month, monthOrAll):
@@ -270,61 +270,9 @@ def transactionTable(aid, year, month, monthOrAll):
     table = "Something went wrong. Try submitting a time period, again."
     return table
 
-# def transactionTableTEST(aid, year, month, monthOrAll):
-#     if monthOrAll == 0:
-#         results = []
-#         cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s AND "
-#                                 "tdate >= DATE \'%s-%s-1\' AND "
-#                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
-#                                 "UNION "
-#                                 "SELECT * FROM incomes WHERE aid = %s AND "
-#                                 "tdate >= DATE \'%s-%s-1\' AND "
-#                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
-#                                 "SELECT * FROM transactions order by tdate asc;",
-#                                 (aid, year, month, year, month, aid, year, month, year, month))
-#         for result in cursor:
-#             if result['tdescription'] == "":
-#                 result['tdescription'] = '-----------'
-#             results.append({'tid': result['tid'],
-#                             'tdate': result['tdate'],
-#                             'tdescription': result['tdescription'],
-#                             'tamount': result['tamount'],
-#                             'tlabel': result['expense_label'],
-#                             'tperson': result['pid'],
-#                             'tpayment': result['oid']})
-#         cursor.close()
-#         table = TradeResults(results)
-#         table.border = True
-#         if not results:
-#             table = "No transactions for this period"
-#         return table
-#     elif monthOrAll == 1:
-#         results = []
-#         cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s "
-#                                 "UNION "
-#                                 "SELECT * FROM incomes WHERE aid = %s) "
-#                                 "SELECT * FROM transactions order by tdate asc",
-#                                 (aid, aid))
-#         for result in cursor:
-#            results.append({'tid': result['tid'],
-#                             'tdate': result['tdate'],
-#                             'tdescription': result['tdescription'],
-#                             'tamount': result['tamount'],
-#                             'tlabel': result['expense_label'],
-#                             'tperson': result['pid'],
-#                             'tpayment': result['oid']})
-#         cursor.close()
-#         table = TradeResults(results)
-#         table.border = True
-#         if not results:
-#             table = "No transactions for this period"
-#         return table
-#     table = "Something went wrong. Try submitting a time period, again."
-#     return table
-
 ##################################################################################
 # view trades/statement in the tracking account
-# TODO: This is a raw version of view_trackingacount
+# TODO: !!!! REMEMBER TO ADD BUDGET FEATURE (Total Expenses, Total Incomes, Net, Net After Budget)
 ##################################################################################
 @app.route('/view_trackingaccount/<int:aid>', methods=['GET', 'POST'])
 def view_trackingaccount(aid):
@@ -347,6 +295,38 @@ def view_trackingaccount(aid):
     currMonthYear = str(currYear) + "-" + str(currMonth)
     table = transactionTable(aid, currYear, currMonth, 0)
     return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear, byMonth = "checked", byAll = "")
+
+
+##################################################################################
+# add an expense
+##################################################################################
+@app.route('/add_expense', methods=['POST', 'GET'])
+def add_expense():
+    musicpath = ['A', 'B', 'C']
+    if request.method == 'GET':
+        return render_template("add_expense.html", musicpath=musicpath)
+    pdb.set_trace()
+    # POST_ONAME = request.form['oname']
+    # POST_OLABEL = request.form['olabel']
+    # POST_ODESCRIPTION = request.form['odescription']
+    # if not POST_ONAME:
+    #     flash('name should not be null.')
+    #     return redirect(url_for('add_paydeposit'))
+    #
+    # # create new record in db
+    # cursor = g.conn.execute("SELECT MAX(oid) FROM Payment_Deposit_Options;")
+    # curoid = cursor.next()[0] + 1
+    # cursor.close()
+    # try:
+    #     # if violate ICs, redirect to another add payment/deposit option page
+    #
+    #     g.conn.execute("INSERT INTO Payment_Deposit_Options(oid, oname, olabel, odescription, uid) VALUES "
+    #                    "(%s,  %s, %s, %s, %s);", (curoid, POST_ONAME, POST_OLABEL, POST_ODESCRIPTION, session['uid']))
+    # except:
+    #     flash('Payment/deposit option cannot be created.')
+    #     return redirect(url_for('add_paydeposit'))
+    # flash('Option created.')
+    return redirect(url_for('paydeposit'))
 
 ##################################################################################
 # delete a trade

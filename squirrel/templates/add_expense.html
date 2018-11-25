@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block body %}
+<h1>New Expense</h1>
+<br>
+<form action="/add_expense" method="POST">
+  <select name="pet-select" id="pet-select">
+      {% for i in range(len(musicpath)):%}
+        <option value="{{i}}">{{ musicpath[i] }}</option>
+      {% endfor %}
+  </select>
+  <!--<input type="text" name="adescription" placeholder="Description">-->
+  <input type="submit" value="Add">
+</form>
+
+<b><a href = '/'>click here to go back</a></b>
+{% endblock %}

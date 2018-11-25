@@ -2,9 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3037684c-2046-44c6-add3-558bf63688b2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/templates/delete_trade.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/templates/add_expense.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/myserver.py" beforeDir="false" afterPath="$PROJECT_DIR$/myserver.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/view_trackingaccount.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/view_trackingaccount.html" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -63,25 +64,25 @@
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
           <entry key="Python Console" value="157" />
-          <entry key="html" value="768" />
-          <entry key="py" value="4358" />
+          <entry key="html" value="927" />
+          <entry key="py" value="4550" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="HTML" value="768" />
-          <entry key="Python" value="4515" />
+          <entry key="HTML" value="927" />
+          <entry key="Python" value="4707" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
         <counts>
-          <entry key="html" value="35" />
+          <entry key="html" value="40" />
           <entry key="py" value="4" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.open">
         <counts>
-          <entry key="HTML" value="35" />
+          <entry key="HTML" value="40" />
           <entry key="Python" value="4" />
         </counts>
       </usages-collector>
@@ -89,11 +90,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/myserver.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="374">
-              <caret line="356" column="81" selection-start-line="356" selection-start-column="81" selection-end-line="356" selection-end-column="81" />
+            <state relative-caret-position="314">
+              <caret line="304" column="9" lean-forward="true" selection-start-line="304" selection-start-column="9" selection-end-line="304" selection-end-column="9" />
               <folding>
                 <element signature="e#143#153#0" expanded="true" />
               </folding>
@@ -101,11 +102,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/templates/delete_trade.html">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/templates/add_expense.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="15">
-              <caret line="1" column="30" lean-forward="true" selection-start-line="1" selection-start-column="30" selection-end-line="1" selection-end-column="30" />
+            <state relative-caret-position="90">
+              <caret line="6" column="42" selection-start-line="6" selection-start-column="42" selection-end-line="6" selection-end-column="42" />
             </state>
           </provider>
         </entry>
@@ -168,9 +169,10 @@
         <option value="$PROJECT_DIR$/templates/edit_trackingaccount.html" />
         <option value="$PROJECT_DIR$/templates/dashboard.html" />
         <option value="$PROJECT_DIR$/templates/delete_trackingaccount.html" />
-        <option value="$PROJECT_DIR$/templates/view_trackingaccount.html" />
         <option value="$PROJECT_DIR$/templates/delete_trade.html" />
+        <option value="$PROJECT_DIR$/templates/view_trackingaccount.html" />
         <option value="$PROJECT_DIR$/myserver.py" />
+        <option value="$PROJECT_DIR$/templates/add_expense.html" />
       </list>
     </option>
   </component>
@@ -431,13 +433,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templates/add_trackingaccount.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="165">
-          <caret line="11" column="14" lean-forward="true" selection-start-line="11" selection-start-column="14" selection-end-line="11" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/templates/edit_trackingaccount.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="150">
@@ -473,13 +468,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templates/view_trackingaccount.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="8" column="7" selection-start-line="8" selection-start-column="7" selection-end-line="8" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/templates/edit_paydeposit.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
@@ -508,13 +496,34 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/templates/add_trackingaccount.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret selection-end-line="11" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templates/view_trackingaccount.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="330">
+          <caret line="22" column="52" lean-forward="true" selection-start-line="22" selection-start-column="52" selection-end-line="22" selection-end-column="52" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/myserver.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="356" column="81" selection-start-line="356" selection-start-column="81" selection-end-line="356" selection-end-column="81" />
+        <state relative-caret-position="314">
+          <caret line="304" column="9" lean-forward="true" selection-start-line="304" selection-start-column="9" selection-end-line="304" selection-end-column="9" />
           <folding>
             <element signature="e#143#153#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templates/add_expense.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="90">
+          <caret line="6" column="42" selection-start-line="6" selection-start-column="42" selection-end-line="6" selection-end-column="42" />
         </state>
       </provider>
     </entry>
