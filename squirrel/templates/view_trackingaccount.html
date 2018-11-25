@@ -6,13 +6,20 @@
   <input type="radio" name="transactions" value="byMonth" {{byMonth}}>View by Month 
   <input type="radio" name="transactions" value="byAll" {{byAll}}>View all Transactions
   <input type="submit" value="Submit">
-</form>
+<!--</form>-->
 <!--<form action= "/view_trackingaccount/{{ aid }}" method="POST">
   <input type="submit" name="viewAll" value="View all transactions">-->
-</form>
+<!--</form>-->
 <br>
+{% if isbudget: %}
+  <h3>Budget: {{ budget }}</h3>
+{% endif %}
+<a href = '/setbudget/{{ aid }}/{{ dateSendBack }}/{{ isbudget }}'>click here to set the budget for {{ dateSendBack }}</a>
 <br>
 {{table}}
+{% if isbudget: %}
+  <h3>Budget Left: {{ budget }}</h3>
+{% endif %}
 <br>
 <a href = '/add_income/{{ aid }}'>click here to add an INCOME</a>
 <br>

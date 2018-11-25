@@ -272,6 +272,7 @@ def transactionTable(aid, year, month, monthOrAll):
 ##################################################################################
 # view trades/statement in the tracking account
 # TODO: !!!! REMEMBER TO ADD BUDGET FEATURE (Total Expenses, Total Incomes, Net, Net After Budget)
+# TODO: !!!! I am halfway through the budget part, leave this to me, I will do it tmr.
 ##################################################################################
 @app.route('/view_trackingaccount/<int:aid>', methods=['GET', 'POST'])
 def view_trackingaccount(aid):
@@ -281,19 +282,41 @@ def view_trackingaccount(aid):
                 POST_YEARMONTH = str(request.form['month'])
                 POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
                 table = transactionTable(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
-                return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "")
+
+                # Check if there is a statement in db, if so retrieve the budget
+                try:
+                    cursor = g.conn.execute("SELECT sbudget FROM Statements "
+                                            "WHERE aid = %s AND "
+                                            "syear = %s AND "
+                                            "smonth = %s;", (aid, POST_YEAR, POST_MONTH))
+                    budget = cursor.next()
+                    cursor.close()
+                except:
+                    isbudget = False
+                    return render_template("view_trackingaccount.html", aid=aid, table=table,
+                                           dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
+                                           isbudget=0, budget = 0.0)
+
+                return render_template("view_trackingaccount.html", aid=aid, table=table,
+                                       dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
+                                       isbudget=1, budget=budget)
             except:
                 flash('Make sure you fill out both the month and the year.')
-                return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "")
+                return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "",
+                                       isbudget=0, budget=0.0)
+
         elif "byAll" == request.form['transactions']:
             table = transactionTable(aid, 0000, 00, 1) #1 tells the function to execute for all transactions
             return render_template("view_trackingaccount.html", aid = aid, table = table, byMonth = "", byAll = "checked")
-        return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "")
+        return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "", isbudget=0)
     currMonth = datetime.now().month
     currYear = datetime.now().year
     currMonthYear = str(currYear) + "-" + str(currMonth)
     table = transactionTable(aid, currYear, currMonth, 0)
-    return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack = currMonthYear, byMonth = "checked", byAll = "")
+
+    return render_template("view_trackingaccount.html", aid=aid, table=table,
+                           dateSendBack = currMonthYear, byMonth = "checked", byAll = "",
+                           isbudget=0, budget =0.0)
 
 ##################################################################################
 # func to retrieve pre-set value lists for adding/editing an income/expense
@@ -787,7 +810,6 @@ def edit_people(pid):
     flash('People (Payer/Payee) updated successfully!')
     return redirect(url_for('people'))
 
-
 ##################################################################################
 # delete people record
 ##################################################################################
@@ -804,6 +826,36 @@ def delete_people(pid):
         flash('People (Payer/Payee) cannot be deleted!')
         return redirect(url_for("people"))
     return redirect(url_for("people"))
+
+
+##################################################################################
+# set a budget (if the statement record exists update it else create one)
+# TODO: !!!! I am halfway through the budget part, leave this to me, I will do it tmr.
+##################################################################################
+@app.route('/setbudget/<int:aid>/<string:dateSendBack>/<int:isbudget>', methods=['GET', 'POST'])
+def setbudget(aid, dateSendBack, isbudget):
+    if request.method == 'GET':
+        cursor = g.conn.execute("SELECT * FROM People WHERE pid = %s;", (pid,))
+        record = cursor.next()
+        cursor.close()
+        return render_template("edit_people.html", pid=pid, pname=record['pname'],
+                               plabel=record['plabel'], pdescription=record['pdescription'])
+
+    # POST_PNAME = request.form['pname'].rstrip()
+    # POST_PLABEL = request.form['plabel'].rstrip()
+    # POST_PDESCRIPTION = request.form['pdescription'].rstrip()
+    # if not POST_PNAME:
+    #     flash('name should not be null.')
+    #     return redirect('/edit_people/{pid}'.format(pid=pid))
+    #
+    # try:
+    #     g.conn.execute("UPDATE People SET pname=%s, plabel=%s, pdescription=%s "
+    #                    "WHERE pid=%s;", (POST_PNAME, POST_PLABEL, POST_PDESCRIPTION, pid))
+    # except:
+    #     flash('People (Payer/Payee) cannot be updated!')
+    #     return redirect(url_for('paydeposit'))
+    # flash('People (Payer/Payee) updated successfully!')
+    return redirect(url_for('people'))
 
 if __name__ == "__main__":
   import click
