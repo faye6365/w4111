@@ -219,8 +219,6 @@ def transactionTable(aid, year, month, monthOrAll):
                                 "ORDER BY T.tdate asc;",
                                 (aid, year, month, year, month, aid, year, month, year, month))
         for result in cursor:
-            if result['tdescription'] == "":
-                result['tdescription'] = '-----------'
             results.append({'aid': aid,
                             'tid': result['tid'],
                             'tdate': result['tdate'],
@@ -249,8 +247,6 @@ def transactionTable(aid, year, month, monthOrAll):
                                 "ORDER BY T.tdate asc;",
                                 (aid, aid))
         for result in cursor:
-           if result['tdescription'] == "":
-                result['tdescription'] = '-----------'
            results.append({ 'aid': aid,
                             'tid': result['tid'],
                             'tdate': result['tdate'],
@@ -270,6 +266,43 @@ def transactionTable(aid, year, month, monthOrAll):
     return table
 
 ##################################################################################
+#Sum incomes, expenses or net change
+##################################################################################
+def superSum(aid, year, month, monthOrAll):
+    income = []
+    expense = []
+    if monthOrAll == 0:
+        cursor = g.conn.execute("SELECT sum(-1*tamount) as sum FROM expenses where aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\';", (aid, year, month, year, month))
+        for result in cursor:
+            expense.append({'sum': result['sum']})
+        cursor.close()
+        cursor = g.conn.execute("SELECT sum(tamount) as sum FROM incomes where aid = %s AND "
+                                "tdate >= DATE \'%s-%s-1\' AND "
+                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\';", (aid, year, month, year, month))
+        for result in cursor:
+            income.append({'sum': result['sum']})
+        cursor.close()
+        incomeSum = income[0].get('sum')
+        expenseSum = expense[0].get('sum')
+        netSum = expenseSum + incomeSum
+        return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net balance: " + str(netSum) 
+    elif monthOrAll == 1:
+        cursor = g.conn.execute("SELECT sum(-1*tamount) as sum FROM expenses where aid = %s", aid)
+        for result in cursor:
+            expense.append({'sum': result['sum']})
+        cursor.close()
+        income = []
+        cursor = g.conn.execute("SELECT sum(tamount) FROM incomes where aid = %s", aid)
+        for result in cursor:
+            income.append({'sum': result['sum']})
+        incomeSum = income[0].get('sum')
+        expenseSum = expense[0].get('sum')
+        netSum = incomeSum + expenseSum
+        return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net balance: " + str(netSum) 
+    return "Could not calculate summary statistics" 
+##################################################################################
 # view trades/statement in the tracking account
 # TODO: !!!! REMEMBER TO ADD BUDGET FEATURE (Total Expenses, Total Incomes, Net, Net After Budget)
 # TODO: !!!! I am halfway through the budget part, leave this to me, I will do it tmr.
@@ -282,7 +315,7 @@ def view_trackingaccount(aid):
                 POST_YEARMONTH = str(request.form['month'])
                 POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
                 table = transactionTable(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
-
+                summaryStats = superSum(aid, POST_YEAR, POST_MONTH, 0)
                 # Check if there is a statement in db, if so retrieve the budget
                 try:
                     cursor = g.conn.execute("SELECT sbudget FROM Statements "
@@ -294,11 +327,11 @@ def view_trackingaccount(aid):
                 except:
                     return render_template("view_trackingaccount.html", aid=aid, table=table,
                                            dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
-                                           isbudget=0, budget = 0.0)
+                                           isbudget=0, budget = 0.0, summaryStats = summaryStats)
 
                 return render_template("view_trackingaccount.html", aid=aid, table=table,
                                        dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
-                                       isbudget=1, budget=budget)
+                                       isbudget=1, budget=budget, summaryStats = summaryStats)
             except:
                 flash('Make sure you fill out both the month and the year.')
                 return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "",
@@ -306,16 +339,17 @@ def view_trackingaccount(aid):
 
         elif "byAll" == request.form['transactions']:
             table = transactionTable(aid, 0000, 00, 1) #1 tells the function to execute for all transactions
-            return render_template("view_trackingaccount.html", aid = aid, table = table, byMonth = "", byAll = "checked")
+            summaryStats = superSum(aid, 0000, 00, 1)
+            return render_template("view_trackingaccount.html", aid = aid, table = table, byMonth = "", byAll = "checked", summaryStats = summaryStats)
         return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "", isbudget=0)
     currMonth = datetime.now().month
     currYear = datetime.now().year
     currMonthYear = str(currYear) + "-" + str(currMonth)
     table = transactionTable(aid, currYear, currMonth, 0)
-
+    summaryStats = superSum(aid, currYear, currMonth, 0)
     return render_template("view_trackingaccount.html", aid=aid, table=table,
                            dateSendBack = currMonthYear, byMonth = "checked", byAll = "",
-                           isbudget=0, budget =0.0)
+                           isbudget=0, budget =0.0, summaryStats = summaryStats)
 
 ##################################################################################
 # func to retrieve pre-set value lists for adding/editing an income/expense
