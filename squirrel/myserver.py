@@ -183,16 +183,16 @@ class TrackingAccountResults(Table):
 class TradeResults(Table):
     tid = Col('Id', show=False)
     tdate = Col('Date')
-    tdescription = Col('Description')
-    tamount = Col('Amount')
+    tperson = Col('From/To Whom')
+    tpayment = Col('Payment/Deposit Options')
     tlabel = Col('Label')
-    tperson = Col('From whom?')
-    tpayment = Col('Payment type')
+    tamount = Col('Amount')
+    tdescription = Col('Description')
 
     # # Called edit_trackingaccount() when the link is clicked.
     # edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
-    # # Called delete_trackingaccount() when the link is clicked.
-    # delete = LinkCol('Delete', 'delete_trackingaccount', url_kwargs=dict(aid='aid'))
+    # Called delete_trade() when the link is clicked.
+    # delete = LinkCol('Delete', 'delete_trade', url_kwargs=dict(tid='tid'))
 
 ##################################################################################
 # Attempt to make a method/function for producing transaction tables. That way we can
@@ -211,7 +211,10 @@ def transactionTable(aid, year, month, monthOrAll):
                                 "SELECT * FROM incomes WHERE aid = %s AND "
                                 "tdate >= DATE \'%s-%s-1\' AND "
                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
-                                "SELECT * FROM transactions order by tdate asc;",
+                                "SELECT * FROM transactions T "
+                                "LEFT OUTER JOIN Payment_Deposit_Options PDO ON T.oid = PDO.oid "
+                                "LEFT OUTER JOIN People PPL ON T.pid = PPL.pid "                                
+                                "ORDER BY T.tdate asc;",
                                 (aid, year, month, year, month, aid, year, month, year, month))
         for result in cursor:
             results.append({'tid': result['tid'],
@@ -219,8 +222,8 @@ def transactionTable(aid, year, month, monthOrAll):
                             'tdescription': result['tdescription'],
                             'tamount': result['tamount'],
                             'tlabel': result['expense_label'],
-                            'tperson': result['pid'],
-                            'tpayment': result['oid']})
+                            'tperson': result['pname'],
+                            'tpayment': result['oname']})
         cursor.close()
         table = TradeResults(results)
         table.border = True
@@ -229,10 +232,15 @@ def transactionTable(aid, year, month, monthOrAll):
         return table
     elif monthOrAll == 1:
         results = []
-        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s "
+        cursor = g.conn.execute("WITH transactions as (SELECT tid, tdate, tdescription, -1*tamount AS tamount, expense_label, oid, pid "
+                                "FROM expenses WHERE aid = %s "
                                 "UNION "
-                                "SELECT * FROM incomes WHERE aid = %s) "
-                                "SELECT * FROM transactions order by tdate asc", 
+                                "SELECT tid, tdate, tdescription, tamount, income_label, oid, pid "
+                                "FROM incomes WHERE aid = %s) "
+                                "SELECT * FROM transactions T "
+                                "LEFT OUTER JOIN Payment_Deposit_Options PDO ON T.oid = PDO.oid "
+                                "LEFT OUTER JOIN People PPL ON T.pid = PPL.pid "
+                                "ORDER BY T.tdate asc;",
                                 (aid, aid))
         for result in cursor:
            results.append({'tid': result['tid'],
@@ -240,8 +248,8 @@ def transactionTable(aid, year, month, monthOrAll):
                             'tdescription': result['tdescription'],
                             'tamount': result['tamount'],
                             'tlabel': result['expense_label'],
-                            'tperson': result['pid'],
-                            'tpayment': result['oid']})
+                            'tperson': result['pname'],
+                            'tpayment': result['oname']})
         cursor.close()
         table = TradeResults(results)
         table.border = True
@@ -251,57 +259,57 @@ def transactionTable(aid, year, month, monthOrAll):
     table = "Something went wrong. Try submitting a time period, again."
     return table
 
-def transactionTableTEST(aid, year, month, monthOrAll):
-    if monthOrAll == 0:
-        results = []
-        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s AND "
-                                "tdate >= DATE \'%s-%s-1\' AND "
-                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
-                                "UNION "
-                                "SELECT * FROM incomes WHERE aid = %s AND "
-                                "tdate >= DATE \'%s-%s-1\' AND "
-                                "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
-                                "SELECT * FROM transactions order by tdate asc;",
-                                (aid, year, month, year, month, aid, year, month, year, month))
-        for result in cursor:
-            if result['tdescription'] == "":
-                result['tdescription'] = '-----------'
-            results.append({'tid': result['tid'],
-                            'tdate': result['tdate'],
-                            'tdescription': result['tdescription'],
-                            'tamount': result['tamount'],
-                            'tlabel': result['expense_label'],
-                            'tperson': result['pid'],
-                            'tpayment': result['oid']})
-        cursor.close()
-        table = TradeResults(results)
-        table.border = True
-        if not results:
-            table = "No transactions for this period"
-        return table
-    elif monthOrAll == 1:
-        results = []
-        cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s "
-                                "UNION "
-                                "SELECT * FROM incomes WHERE aid = %s) "
-                                "SELECT * FROM transactions order by tdate asc", 
-                                (aid, aid))
-        for result in cursor:
-           results.append({'tid': result['tid'],
-                            'tdate': result['tdate'],
-                            'tdescription': result['tdescription'],
-                            'tamount': result['tamount'],
-                            'tlabel': result['expense_label'],
-                            'tperson': result['pid'],
-                            'tpayment': result['oid']})
-        cursor.close()
-        table = TradeResults(results)
-        table.border = True
-        if not results:
-            table = "No transactions for this period"
-        return table
-    table = "Something went wrong. Try submitting a time period, again."
-    return table
+# def transactionTableTEST(aid, year, month, monthOrAll):
+#     if monthOrAll == 0:
+#         results = []
+#         cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s AND "
+#                                 "tdate >= DATE \'%s-%s-1\' AND "
+#                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\' "
+#                                 "UNION "
+#                                 "SELECT * FROM incomes WHERE aid = %s AND "
+#                                 "tdate >= DATE \'%s-%s-1\' AND "
+#                                 "tdate < DATE \'%s-%s-1\'  + INTERVAL \'1 month\') "
+#                                 "SELECT * FROM transactions order by tdate asc;",
+#                                 (aid, year, month, year, month, aid, year, month, year, month))
+#         for result in cursor:
+#             if result['tdescription'] == "":
+#                 result['tdescription'] = '-----------'
+#             results.append({'tid': result['tid'],
+#                             'tdate': result['tdate'],
+#                             'tdescription': result['tdescription'],
+#                             'tamount': result['tamount'],
+#                             'tlabel': result['expense_label'],
+#                             'tperson': result['pid'],
+#                             'tpayment': result['oid']})
+#         cursor.close()
+#         table = TradeResults(results)
+#         table.border = True
+#         if not results:
+#             table = "No transactions for this period"
+#         return table
+#     elif monthOrAll == 1:
+#         results = []
+#         cursor = g.conn.execute("WITH transactions as (SELECT * FROM expenses WHERE aid = %s "
+#                                 "UNION "
+#                                 "SELECT * FROM incomes WHERE aid = %s) "
+#                                 "SELECT * FROM transactions order by tdate asc",
+#                                 (aid, aid))
+#         for result in cursor:
+#            results.append({'tid': result['tid'],
+#                             'tdate': result['tdate'],
+#                             'tdescription': result['tdescription'],
+#                             'tamount': result['tamount'],
+#                             'tlabel': result['expense_label'],
+#                             'tperson': result['pid'],
+#                             'tpayment': result['oid']})
+#         cursor.close()
+#         table = TradeResults(results)
+#         table.border = True
+#         if not results:
+#             table = "No transactions for this period"
+#         return table
+#     table = "Something went wrong. Try submitting a time period, again."
+#     return table
 
 ##################################################################################
 # view trades/statement in the tracking account
@@ -314,13 +322,13 @@ def view_trackingaccount(aid):
             try:
                 POST_YEARMONTH = str(request.form['month'])
                 POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
-                table = transactionTableTEST(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
+                table = transactionTable(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
                 return render_template("view_trackingaccount.html", aid=aid, table=table, dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "")
             except:
                 flash('Make sure you fill out both the month and the year.')
                 return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "")
         elif "byAll" == request.form['transactions']:
-            table = transactionTableTEST(aid, 0000, 00, 1) #1 tells the function to execute for all transactions
+            table = transactionTable(aid, 0000, 00, 1) #1 tells the function to execute for all transactions
             return render_template("view_trackingaccount.html", aid = aid, table = table, byMonth = "", byAll = "checked")
         return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "")
     currMonth = datetime.now().month
