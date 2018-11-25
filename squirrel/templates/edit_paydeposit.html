@@ -3,7 +3,7 @@
 <h1>Edit Payment/Deposit Option</h1>
 <br>
 <form action="/edit_paydeposit/{{ oid }}" method="POST">
-  <input type="text" name="oname" value="{{ oname }}">
+  <input type="text" name="oname" value="{{ oname }}" required>
   <input type="text" name="olabel" value="{{ olabel }}">
   <input type="text" name="odescription" value="{{ odescription }}">
   <input type="submit" value="Submit">
