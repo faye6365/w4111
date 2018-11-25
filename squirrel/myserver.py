@@ -24,6 +24,9 @@ DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
 
 DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/w4111"
 
+
+months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
 ##################################################################################
 # This line creates a database engine that knows how to connect to the URI above
 ##################################################################################
@@ -78,11 +81,11 @@ def index():
         results = []
         for result in cursor:
             summaryStats = superSum(result['aid'], 0000, 00, 1)
-            summaryStats = summaryStats.split("Net balance: ",1)[1]
+            netExchange = summaryStats.split("Net exchange: ",1)[1]
             results.append({'aid': result['aid'],
                             'aname': result['aname'],
                             'adescription': result['adescription'],
-                            'aNet': summaryStats})
+                            'aNet': netExchange})
         cursor.close()
    
         table = TrackingAccountResults(results)
@@ -105,8 +108,6 @@ def login():
     # check if there is matched user record in the db
     if 'uid' not in session:
         try:
-            #qlogin = "SELECT uid FROM Users WHERE username = %s AND password = %s;"
-            #cursor = g.conn.execute(qlogin, (POST_USERNAME, POST_PASSWORD))
             cursor = g.conn.execute("SELECT uid FROM Users "
                                    "WHERE username = %s AND "
                                   "password = %s;", (POST_USERNAME, POST_PASSWORD))
@@ -170,7 +171,7 @@ class TrackingAccountResults(Table):
     aid = Col('Id', show=False)
     aname = Col('Name')
     adescription = Col('Description')
-    aNet = Col('Net Balance')
+    aNet = Col('Net Exchange')
     # Called edit_trackingaccount() when the link is clicked.
     edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
     # Called delete_trackingaccount() when the link is clicked.
@@ -294,7 +295,7 @@ def superSum(aid, year, month, monthOrAll):
             expenseSum = 0000.00
         netSum = float(expenseSum) + float(incomeSum)
 
-        return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net balance: " + str(netSum) 
+        return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net exchange: " + str(netSum) 
     elif monthOrAll == 1:
         cursor = g.conn.execute("SELECT sum(-1*tamount) as sum FROM expenses where aid = %s", aid)
         for result in cursor:
@@ -311,7 +312,7 @@ def superSum(aid, year, month, monthOrAll):
         if expenseSum is None:
             expenseSum = 0000.00
         netSum = float(incomeSum) + float(expenseSum)
-        return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net balance: " + str(netSum) 
+        return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net exchange: " + str(netSum) 
     return "Could not calculate summary statistics" 
 ##################################################################################
 # view trades/statement in the tracking account
@@ -327,22 +328,24 @@ def view_trackingaccount(aid):
                 POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
                 table = transactionTable(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
                 summaryStats = superSum(aid, POST_YEAR, POST_MONTH, 0)
+                budgetButton = "Click here to set budget for " + months[POST_MONTH-1] + ", " + str(POST_YEAR)
                 # Check if there is a statement in db, if so retrieve the budget
-                try:
+                try:                   
                     cursor = g.conn.execute("SELECT sbudget FROM Statements "
                                             "WHERE aid = %s AND "
                                             "syear = %s AND "
                                             "smonth = %s;", (aid, POST_YEAR, POST_MONTH))
                     budget = cursor.next()[0]
+                    budgetLeft = float(budget) + float(summaryStats.split("Net exchange: ",1)[1])
                     cursor.close()
-                except:
+                except:                   
                     return render_template("view_trackingaccount.html", aid=aid, table=table,
                                            dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
-                                           isbudget=0, budget = 0.0, summaryStats = summaryStats)
+                                           isbudget=0, budget = 0.0, summaryStats = summaryStats, budgetButton = budgetButton)
 
                 return render_template("view_trackingaccount.html", aid=aid, table=table,
                                        dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
-                                       isbudget=1, budget=budget, summaryStats = summaryStats)
+                                       isbudget=1, budget=budget, summaryStats = summaryStats, budgetButton = budgetButton, budgetLeft = budgetLeft)
             except:
                 flash('Make sure you fill out both the month and the year.')
                 return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "",
@@ -358,9 +361,10 @@ def view_trackingaccount(aid):
     currMonthYear = str(currYear) + "-" + str(currMonth)
     table = transactionTable(aid, currYear, currMonth, 0)
     summaryStats = superSum(aid, currYear, currMonth, 0)
+    budgetButton = "Click here to set budget for " + months[currMonth-1] + ", " + str(currYear)
     return render_template("view_trackingaccount.html", aid=aid, table=table,
                            dateSendBack = currMonthYear, byMonth = "checked", byAll = "",
-                           isbudget=0, budget =0.0, summaryStats = summaryStats)
+                           isbudget=0, budget =0.0, summaryStats = summaryStats, budgetButton = budgetButton)
 
 ##################################################################################
 # func to retrieve pre-set value lists for adding/editing an income/expense
