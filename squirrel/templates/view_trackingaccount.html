@@ -14,7 +14,9 @@
 {% if isbudget: %}
   <h3>Budget: {{ budget }}</h3>
 {% endif %}
+<br>
 <a href = '/setbudget/{{ aid }}/{{ dateSendBack }}/{{ isbudget }}'>click here to set the budget for {{ dateSendBack }}</a>
+<br>
 <br>
 {{table}}
 {% if isbudget: %}

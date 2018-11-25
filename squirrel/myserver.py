@@ -289,10 +289,9 @@ def view_trackingaccount(aid):
                                             "WHERE aid = %s AND "
                                             "syear = %s AND "
                                             "smonth = %s;", (aid, POST_YEAR, POST_MONTH))
-                    budget = cursor.next()
+                    budget = cursor.next()[0]
                     cursor.close()
                 except:
-                    isbudget = False
                     return render_template("view_trackingaccount.html", aid=aid, table=table,
                                            dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
                                            isbudget=0, budget = 0.0)
@@ -830,32 +829,45 @@ def delete_people(pid):
 
 ##################################################################################
 # set a budget (if the statement record exists update it else create one)
-# TODO: !!!! I am halfway through the budget part, leave this to me, I will do it tmr.
 ##################################################################################
 @app.route('/setbudget/<int:aid>/<string:dateSendBack>/<int:isbudget>', methods=['GET', 'POST'])
 def setbudget(aid, dateSendBack, isbudget):
-    if request.method == 'GET':
-        cursor = g.conn.execute("SELECT * FROM People WHERE pid = %s;", (pid,))
-        record = cursor.next()
-        cursor.close()
-        return render_template("edit_people.html", pid=pid, pname=record['pname'],
-                               plabel=record['plabel'], pdescription=record['pdescription'])
 
-    # POST_PNAME = request.form['pname'].rstrip()
-    # POST_PLABEL = request.form['plabel'].rstrip()
-    # POST_PDESCRIPTION = request.form['pdescription'].rstrip()
-    # if not POST_PNAME:
-    #     flash('name should not be null.')
-    #     return redirect('/edit_people/{pid}'.format(pid=pid))
-    #
-    # try:
-    #     g.conn.execute("UPDATE People SET pname=%s, plabel=%s, pdescription=%s "
-    #                    "WHERE pid=%s;", (POST_PNAME, POST_PLABEL, POST_PDESCRIPTION, pid))
-    # except:
-    #     flash('People (Payer/Payee) cannot be updated!')
-    #     return redirect(url_for('paydeposit'))
-    # flash('People (Payer/Payee) updated successfully!')
-    return redirect(url_for('people'))
+    POST_YEAR, POST_MONTH = map(int, dateSendBack.split('-'))
+
+    if request.method == 'GET':
+        prebudget = None
+        if isbudget:
+            cursor = g.conn.execute("SELECT sbudget FROM Statements "
+                                    "WHERE aid = %s AND "
+                                    "syear = %s AND "
+                                    "smonth = %s;", (aid, POST_YEAR, POST_MONTH))
+            prebudget = cursor.next()[0]
+            cursor.close()
+
+        return render_template("setbudget.html", aid=aid, dateSendBack=dateSendBack, isbudget=isbudget, prebudget=prebudget)
+
+    POST_BUDGET = request.form['sbudget']
+    try:
+        # if statement(budget) exists, performing an update else performing an insertion.
+        if isbudget:
+            g.conn.execute("UPDATE Statements SET sbudget = %s "
+                           "WHERE aid = %s AND "
+                           "syear = %s AND "
+                           "smonth = %s;", (POST_BUDGET, aid, POST_YEAR, POST_MONTH))
+        else:
+            g.conn.execute("INSERT INTO Statements(aid, syear, smonth, sbudget) VALUES "
+                           "(%s,  %s, %s, %s);",
+                           (aid, POST_YEAR, POST_MONTH, POST_BUDGET))
+    except:
+        # if violate ICs, redirect to another set budget page
+
+        flash('Budget (Statement) cannot be set!')
+        return redirect('/setbudget/{aid}/{dateSendBack}/{isbudget}'.format(aid=aid, dateSendBack=dateSendBack, isbudget=isbudget))
+
+    flash('Budget (Statement) is set successfully!')
+
+    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
 
 if __name__ == "__main__":
   import click
