@@ -60,6 +60,12 @@ def teardown_request(exception):
     pass
 
 ##################################################################################
+# cache variable to store the view tracking account time
+##################################################################################
+CURRENT_MONTH = '{year}-{month}'.format(year=datetime.now().year, month=datetime.now().month)
+CACHE = {'time': CURRENT_MONTH}
+
+##################################################################################
 # index page
 ##################################################################################
 @app.route('/')
@@ -76,7 +82,7 @@ def index():
                                "WHERE uid = %s", (uid,))
         name = cursor.next()[0]
         cursor.close()
-  
+
         cursor = g.conn.execute("SELECT * FROM Tracking_Accounts WHERE uid = %s ORDER BY aid;", (session['uid'],))
         results = []
         for result in cursor:
@@ -87,7 +93,6 @@ def index():
                             'adescription': result['adescription'],
                             'aNet': netExchange})
         cursor.close()
-   
         table = TrackingAccountResults(results)
         table.border = True
 
@@ -176,7 +181,7 @@ class TrackingAccountResults(Table):
     edit = LinkCol('Edit', 'edit_trackingaccount', url_kwargs=dict(aid='aid'))
     # Called delete_trackingaccount() when the link is clicked.
     delete = LinkCol('Delete', 'delete_trackingaccount', url_kwargs=dict(aid='aid'))
-    view = LinkCol('View', 'view_trackingaccount', url_kwargs=dict(aid='aid'))
+    view = LinkCol('View', 'view_trackingaccount', url_kwargs=dict(aid='aid'), url_kwargs_extra=dict(time=CURRENT_MONTH))
 
 
 ##################################################################################
@@ -203,7 +208,6 @@ class TradeResults(Table):
 # Attempt to make a method/function for producing transaction tables. That way we can
 # simplify the view_tracking account route
 ##################################################################################
-
 def transactionTable(aid, year, month, monthOrAll):
     if monthOrAll == 0:
         results = []
@@ -269,7 +273,7 @@ def transactionTable(aid, year, month, monthOrAll):
     return table
 
 ##################################################################################
-#Sum incomes, expenses or net change
+# Sum incomes, expenses or net change
 ##################################################################################
 def superSum(aid, year, month, monthOrAll):
     income = []
@@ -313,24 +317,28 @@ def superSum(aid, year, month, monthOrAll):
             expenseSum = 0000.00
         netSum = float(incomeSum) + float(expenseSum)
         return "Total incomes: " + str(incomeSum) + " | Total expenses: " + str(expenseSum) + " | Net exchange: " + str(netSum) 
-    return "Could not calculate summary statistics" 
+    return "Could not calculate summary statistics"
+
 ##################################################################################
 # view trades/statement in the tracking account
-# TODO: !!!! REMEMBER TO ADD BUDGET FEATURE (Total Expenses, Total Incomes, Net, Net After Budget)
-# TODO: !!!! I am halfway through the budget part, leave this to me, I will do it tmr.
 ##################################################################################
-@app.route('/view_trackingaccount/<int:aid>', methods=['GET', 'POST'])
-def view_trackingaccount(aid):
-    if request.method == 'POST':
-        if "byMonth" == request.form['transactions']:
+@app.route('/view_trackingaccount/<int:aid>/<string:time>', methods=['GET', 'POST'])
+def view_trackingaccount(aid, time):
+    if request.method == 'GET':
+        if "byAll" == time:
+            table = transactionTable(aid, 0000, 00, 1)  # 1 tells the function to execute for all transactions
+            summaryStats = superSum(aid, 0000, 00, 1)
+            return render_template("view_trackingaccount.html", aid=aid, table=table, byMonth="", byAll="checked",
+                                   summaryStats=summaryStats, time=time)
+        else:
             try:
-                POST_YEARMONTH = str(request.form['month'])
+                POST_YEARMONTH = time
                 POST_YEAR, POST_MONTH = map(int, POST_YEARMONTH.split('-'))
                 table = transactionTable(aid, POST_YEAR, POST_MONTH, 0) #0 tells the function to execute by month. As opposed to 1 telling to execute for all expenses
                 summaryStats = superSum(aid, POST_YEAR, POST_MONTH, 0)
                 budgetButton = "Click here to set budget for " + months[POST_MONTH-1] + ", " + str(POST_YEAR)
                 # Check if there is a statement in db, if so retrieve the budget
-                try:                   
+                try:
                     cursor = g.conn.execute("SELECT sbudget FROM Statements "
                                             "WHERE aid = %s AND "
                                             "syear = %s AND "
@@ -338,33 +346,26 @@ def view_trackingaccount(aid):
                     budget = cursor.next()[0]
                     budgetLeft = float(budget) + float(summaryStats.split("Net exchange: ",1)[1])
                     cursor.close()
-                except:                   
+                except:
                     return render_template("view_trackingaccount.html", aid=aid, table=table,
                                            dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
-                                           isbudget=0, budget = 0.0, summaryStats = summaryStats, budgetButton = budgetButton)
+                                           isbudget=0, budget = 0.0, summaryStats = summaryStats,
+                                           budgetButton = budgetButton, time=time)
 
                 return render_template("view_trackingaccount.html", aid=aid, table=table,
                                        dateSendBack=POST_YEARMONTH, byMonth = "checked", byAll = "",
-                                       isbudget=1, budget=budget, summaryStats = summaryStats, budgetButton = budgetButton, budgetLeft = budgetLeft)
+                                       isbudget=1, budget=budget, summaryStats = summaryStats,
+                                       budgetButton = budgetButton, budgetLeft = budgetLeft, time=time)
             except:
-                flash('Make sure you fill out both the month and the year.')
                 return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "",
-                                       isbudget=0, budget=0.0)
+                                       isbudget=0, budget=0.0, time=time)
 
-        elif "byAll" == request.form['transactions']:
-            table = transactionTable(aid, 0000, 00, 1) #1 tells the function to execute for all transactions
-            summaryStats = superSum(aid, 0000, 00, 1)
-            return render_template("view_trackingaccount.html", aid = aid, table = table, byMonth = "", byAll = "checked", summaryStats = summaryStats)
-        return render_template("view_trackingaccount.html", aid = aid, byMonth = "checked", byAll = "", isbudget=0)
-    currMonth = datetime.now().month
-    currYear = datetime.now().year
-    currMonthYear = str(currYear) + "-" + str(currMonth)
-    table = transactionTable(aid, currYear, currMonth, 0)
-    summaryStats = superSum(aid, currYear, currMonth, 0)
-    budgetButton = "Click here to set budget for " + months[currMonth-1] + ", " + str(currYear)
-    return render_template("view_trackingaccount.html", aid=aid, table=table,
-                           dateSendBack = currMonthYear, byMonth = "checked", byAll = "",
-                           isbudget=0, budget =0.0, summaryStats = summaryStats, budgetButton = budgetButton)
+    if "byMonth" == request.form['transactions']:
+        CACHE['time'] = request.form['month']
+        return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
+    else:
+        CACHE['time'] = 'byAll'
+        return redirect('/view_trackingaccount/{aid}/byAll'.format(aid=aid))
 
 ##################################################################################
 # func to retrieve pre-set value lists for adding/editing an income/expense
@@ -419,7 +420,8 @@ def add_expense(aid):
     labels = presets['labels']
 
     if request.method == 'GET':
-        return render_template("add_expense.html", aid=aid, people=people, options=options, labels=labels)
+        return render_template("add_expense.html", aid=aid, people=people, options=options, labels=labels,
+                               cacheTime=CACHE['time'])
 
     POST_AID = aid
     POST_PID = request.form['pid']
@@ -447,7 +449,7 @@ def add_expense(aid):
         flash('Expense cannot be created.')
         return redirect('/add_expense/{aid}'.format(aid=aid))
     flash('Expense created.')
-    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
+    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
 
 ##################################################################################
 # add an income
@@ -462,7 +464,8 @@ def add_income(aid):
     labels = presets['labels']
 
     if request.method == 'GET':
-        return render_template("add_income.html", aid=aid, people=people, options=options, labels=labels)
+        return render_template("add_income.html", aid=aid, people=people, options=options, labels=labels,
+                               cacheTime=CACHE['time'])
 
     POST_AID = aid
     POST_PID = request.form['pid']
@@ -490,7 +493,7 @@ def add_income(aid):
         flash('Income cannot be created.')
         return redirect('/add_income/{aid}'.format(aid=aid))
     flash('Income created.')
-    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
+    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
 
 ##################################################################################
 # edit a trade
@@ -517,7 +520,8 @@ def edit_trade(aid, tid, ttype):
         return render_template("edit_trade.html", aid=aid, tid=tid, ttype=ttype, prepid=record['pid'],
                                preoid=record['oid'], pretdate=record['tdate'], pretlabel=tlabel,
                                pretdescription=record['tdescription'], pretamount=record['tamount'],
-                               people=people, options=options, labels=labels)
+                               people=people, options=options, labels=labels,
+                               cacheTime=CACHE['time'])
 
     POST_AID = aid
     POST_PID = request.form['pid']
@@ -542,7 +546,7 @@ def edit_trade(aid, tid, ttype):
         flash('Trade cannot be updated!')
         return redirect('/edit_trade/{aid}_{tid}_{ttype}'.format(aid=aid, tid=tid, ttype=ttype))
     flash('Trade updated successfully!')
-    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
+    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
 
 ##################################################################################
 # delete a trade
@@ -550,7 +554,7 @@ def edit_trade(aid, tid, ttype):
 @app.route('/delete_trade/<int:aid>_<int:tid>_<string:ttype>', methods=['GET', 'POST'])
 def delete_trade(aid, tid, ttype):
     if request.method == 'GET':
-        return render_template("delete_trade.html", aid=aid, tid=tid, ttype=ttype)
+        return render_template("delete_trade.html", aid=aid, tid=tid, ttype=ttype, cacheTime=CACHE['time'])
 
     # delete the item from the database
     try:
@@ -561,8 +565,8 @@ def delete_trade(aid, tid, ttype):
         flash('Trade deleted successfully!')
     except:
         flash('Trade cannot be deleted!')
-        return redirect("/view_trackingaccount/{aid}".format(aid=aid))
-    return redirect("/view_trackingaccount/{aid}".format(aid=aid))
+        return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
+    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
 
 ##################################################################################
 # add new tracking account
@@ -916,7 +920,7 @@ def setbudget(aid, dateSendBack, isbudget):
 
     flash('Budget (Statement) is set successfully!')
 
-    return redirect('/view_trackingaccount/{aid}'.format(aid=aid))
+    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
 
 if __name__ == "__main__":
   import click

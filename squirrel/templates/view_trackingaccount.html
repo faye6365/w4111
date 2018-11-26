@@ -1,12 +1,12 @@
 {% extends "layout.html" %}
 {% block body %}
 <br>
-<form action="/view_trackingaccount/{{ aid }}" method="POST">
-  <input type="month" name="month" min="2000-01" max = "2019-12" value = {{dateSendBack}}>
+<form action="/view_trackingaccount/{{ aid }}/{{ time }}" method="POST">
+  <input type="month" name="month" min="2000-01" max = "2019-12" value = {{ dateSendBack }}>
   <input type="radio" name="transactions" value="byMonth" {{byMonth}}>View by Month 
   <input type="radio" name="transactions" value="byAll" {{byAll}}>View all Transactions
   <input type="submit" value="Submit">
-<!--</form>-->
+</form>
 <!--<form action= "/view_trackingaccount/{{ aid }}" method="POST">
   <input type="submit" name="viewAll" value="View all transactions">-->
 <!--</form>-->
