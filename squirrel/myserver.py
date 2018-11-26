@@ -424,8 +424,8 @@ def add_expense(aid):
                                cacheTime=CACHE['time'], today=datetime.today().date())
 
     POST_AID = aid
-    POST_PID = request.form['pid']
-    POST_OID = request.form['oid']
+    POST_PID = None if request.form['pid'] == 'None' else request.form['pid']
+    POST_OID = None if request.form['oid'] == 'None' else request.form['oid']
     POST_TDATE = request.form['tdate']
     POST_TLABEL = request.form['tlabel']
     POST_TDESCRIPTION = request.form['tdescription']
@@ -468,8 +468,8 @@ def add_income(aid):
                                cacheTime=CACHE['time'], today=datetime.today().date())
 
     POST_AID = aid
-    POST_PID = request.form['pid']
-    POST_OID = request.form['oid']
+    POST_PID = None if request.form['pid'] == 'None' else request.form['pid']
+    POST_OID = None if request.form['oid'] == 'None' else request.form['oid']
     POST_TDATE = request.form['tdate']
     POST_TLABEL = request.form['tlabel']
     POST_TDESCRIPTION = request.form['tdescription']
@@ -524,8 +524,8 @@ def edit_trade(aid, tid, ttype):
                                cacheTime=CACHE['time'], today=datetime.today().date())
 
     POST_AID = aid
-    POST_PID = request.form['pid']
-    POST_OID = request.form['oid']
+    POST_PID = None if request.form['pid'] == 'None' else request.form['pid']
+    POST_OID = None if request.form['oid'] == 'None' else request.form['oid']
     POST_TDATE = request.form['tdate']
     POST_TLABEL = request.form['tlabel'].rstrip()
     POST_TDESCRIPTION = request.form['tdescription'].rstrip()
