@@ -421,7 +421,7 @@ def add_expense(aid):
 
     if request.method == 'GET':
         return render_template("add_expense.html", aid=aid, people=people, options=options, labels=labels,
-                               cacheTime=CACHE['time'])
+                               cacheTime=CACHE['time'], today=datetime.today().date())
 
     POST_AID = aid
     POST_PID = request.form['pid']
@@ -465,7 +465,7 @@ def add_income(aid):
 
     if request.method == 'GET':
         return render_template("add_income.html", aid=aid, people=people, options=options, labels=labels,
-                               cacheTime=CACHE['time'])
+                               cacheTime=CACHE['time'], today=datetime.today().date())
 
     POST_AID = aid
     POST_PID = request.form['pid']
@@ -521,7 +521,7 @@ def edit_trade(aid, tid, ttype):
                                preoid=record['oid'], pretdate=record['tdate'], pretlabel=tlabel,
                                pretdescription=record['tdescription'], pretamount=record['tamount'],
                                people=people, options=options, labels=labels,
-                               cacheTime=CACHE['time'])
+                               cacheTime=CACHE['time'], today=datetime.today().date())
 
     POST_AID = aid
     POST_PID = request.form['pid']
@@ -546,7 +546,9 @@ def edit_trade(aid, tid, ttype):
         flash('Trade cannot be updated!')
         return redirect('/edit_trade/{aid}_{tid}_{ttype}'.format(aid=aid, tid=tid, ttype=ttype))
     flash('Trade updated successfully!')
-    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time=CACHE['time']))
+
+    POST_TYEAR, POST_TMONTH = map(int, POST_TDATE.split('-'))[:-1]
+    return redirect('/view_trackingaccount/{aid}/{time}'.format(aid=aid, time='{}-{}'.format(POST_TYEAR, POST_TMONTH)))
 
 ##################################################################################
 # delete a trade

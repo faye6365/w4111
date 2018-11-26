@@ -4,7 +4,7 @@
 <br>
 <form action="/edit_trade/{{ aid }}_{{ tid }}_{{ ttype }}" method="POST">
     Date:
-    <input type="date" name="tdate" value="{{ pretdate }}" required>
+    <input type="date" name="tdate" value="{{ pretdate }}" max="{{ today }}" required>
     <br>
     Payee:
     <select name="pid" id="pid">

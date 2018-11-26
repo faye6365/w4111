@@ -4,7 +4,7 @@
 <br>
 <form action="/add_income/{{ aid }}" method="POST">
     Date:
-    <input type="date" name="tdate" required>
+    <input type="date" name="tdate" max="{{ today }}" required>
     <br>
     Payer:
     <select name="pid" id="pid">
